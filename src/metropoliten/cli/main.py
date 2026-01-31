@@ -6,6 +6,7 @@ import json
 from datetime import datetime
 
 import click
+from click.exceptions import Exit
 from rich.console import Console
 from rich.table import Table
 
@@ -65,7 +66,7 @@ def init(output: str) -> None:
             click.echo(json.dumps({"status": "error", "message": str(e)}))
         else:
             console.print(f"[red]✗[/red] Error: {e}")
-        raise click.Exit(1)
+        raise Exit(1)
 
 
 @cli.command()
@@ -90,13 +91,6 @@ def init(output: str) -> None:
     default=None,
 )
 @click.option(
-    "--num-options",
-    "-n",
-    type=int,
-    default=1,
-    help="Number of route options",
-)
-@click.option(
     "--lang",
     "-l",
     type=click.Choice(["ua", "en"]),
@@ -118,7 +112,6 @@ def route(
     time: str | None,
     date: str | None,
     day_type: str | None,
-    num_options: int,
     lang: str,
     format: str,
 ) -> None:
@@ -132,11 +125,11 @@ def route(
 
         if not from_st:
             click.echo(f"Station not found: {from_station}", err=True)
-            raise click.Exit(1)
+            raise Exit(1)
 
         if not to_st:
             click.echo(f"Station not found: {to_station}", err=True)
-            raise click.Exit(1)
+            raise Exit(1)
 
         # Parse departure time
         if time:
@@ -159,43 +152,32 @@ def route(
         else:
             dt = None
 
-        # Find routes
-        if num_options > 1:
-            routes = router.find_multiple_routes(from_st.id, to_st.id, departure_time, num_options)
-        else:
-            route = router.find_route(from_st.id, to_st.id, departure_time, dt)
-            routes = [route] if route else []
+        # Find route
+        route = router.find_route(from_st.id, to_st.id, departure_time, dt)
 
-        if not routes:
+        if not route:
             click.echo("No route found", err=True)
-            raise click.Exit(1)
+            raise Exit(1)
 
         # Output
         if format == "json":
             result = {
                 "from": getattr(from_st, f"name_{lang}"),
                 "to": getattr(to_st, f"name_{lang}"),
-                "routes": [r.to_dict(lang) for r in routes],
+                "route": route.to_dict(lang),
             }
             click.echo(json.dumps(result, indent=2, ensure_ascii=False))
         elif format == "simple":
-            for i, route_obj in enumerate(routes, 1):
-                if num_options > 1:
-                    console.print(f"\n[bold cyan]Option {i}:[/bold cyan]")
-                _display_route_simple(route_obj, lang, console)
+            _display_route_simple(route, lang, console)
         else:
-            for i, route_obj in enumerate(routes, 1):
-                if num_options > 1:
-                    console.print(f"\n[bold cyan]Option {i}:[/bold cyan]")
-
-                _display_route_table(route_obj, lang, console)
+            _display_route_table(route, lang, console)
 
     except Exception as e:
         if format == "json":
             click.echo(json.dumps({"status": "error", "message": str(e)}))
         else:
             console.print(f"[red]Error:[/red] {e}")
-        raise click.Exit(1)
+        raise Exit(1)
 
 
 def _display_route_table(route, lang: str, console: Console) -> None:
@@ -351,7 +333,7 @@ def schedule(
         st = router.find_station_by_name(station, lang)
         if not st:
             click.echo(f"Station not found: {station}", err=True)
-            raise click.Exit(1)
+            raise Exit(1)
 
         # Determine day type
         if day_type:
@@ -371,7 +353,7 @@ def schedule(
 
         if not schedules:
             click.echo("No schedule found", err=True)
-            raise click.Exit(1)
+            raise Exit(1)
 
         # Output
         if output == "json":
@@ -416,15 +398,15 @@ def schedule(
             click.echo(json.dumps({"status": "error", "message": str(e)}))
         else:
             console.print(f"[red]Error:[/red] {e}")
-        raise click.Exit(1)
+        raise Exit(1)
 
 
 @cli.command()
 @click.option(
     "--line",
     "-l",
-    type=click.Choice(["kholodnohirsko_zavodska", "saltivska", "oleksiivska"]),
-    help="Filter by line",
+    type=click.Choice(["kholodnohirsko_zavodska", "saltivska", "oleksiivska", "k", "s", "o"]),
+    help="Filter by line (k=kholodnohirsko_zavodska, s=saltivska, o=oleksiivska)",
     default=None,
 )
 @click.option(
@@ -452,7 +434,14 @@ def stations(
         db = MetroDatabase(ctx.obj["db_path"])
         name_attr = f"name_{lang}"
 
+        # Map short line names to full names
+        line_map = {
+            "k": "kholodnohirsko_zavodska",
+            "s": "saltivska",
+            "o": "oleksiivska",
+        }
         if line:
+            line = line_map.get(line, line)
             stations_data = db.get_stations_by_line(line)
         else:
             stations_data = db.get_all_stations()
@@ -489,7 +478,7 @@ def stations(
             click.echo(json.dumps({"status": "error", "message": str(e)}))
         else:
             console.print(f"[red]Error:[/red] {e}")
-        raise click.Exit(1)
+        raise Exit(1)
 
 
 @cli.command()

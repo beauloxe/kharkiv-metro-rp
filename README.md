@@ -2,7 +2,7 @@
 
 CLI та MCP сервер для планування маршрутів у Харківському метрополітені.
 
-<img src="assets/route_demo.png" alt="Default and simple CLI output for routes" width=350>
+<img src="assets/route_demo.png" alt="Default and simple CLI output for routes" width=500>
 
 ## Запуск та ініціалізація бази даних
 

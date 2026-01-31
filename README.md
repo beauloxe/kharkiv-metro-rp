@@ -61,6 +61,11 @@ metro-mcp
 ```
 
 ### OpenCode
+Передбачає:
+- Наявність `uv` у `$PATH`
+- Локальний репозиторій
+  - `git clone https://github.com/beauloxe/kharkiv-metro-rp.git /foo/bar/`, де `/foo/bar/` - приклад директорії.
+
 ```json
 "mcp": {
     "metro-kh": {
@@ -68,8 +73,8 @@ metro-mcp
         "type": "local",
         "command": [
         "uv", "run",
-        "--directory", "/foo/bar/kharkiv-subway",
-        "python", "-m", "metropoliten.mcp.server"
+        "--directory", "/foo/bar/kharkiv-metro-rp",
+        "python", "-m", "kharkiv_metro_rp.mcp.server"
         ],
     }
 }

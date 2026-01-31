@@ -1,5 +1,5 @@
 [project]
-name = "metropoliten"
+name = "kharkiv-metro-rp"
 version = "0.1.0"
 description = "CLI and MCP server for Kharkiv metro route planning"
 authors = [{name = "User", email = "user@example.com"}]
@@ -23,8 +23,8 @@ dev = [
 ]
 
 [project.scripts]
-metro = "metropoliten.cli.main:cli"
-metro-mcp = "metropoliten.mcp.server:main"
+metro = "kharkiv_metro_rp.cli.main:cli"
+metro-mcp = "kharkiv_metro_rp.mcp.server:main"
 
 [build-system]
 requires = ["hatchling"]

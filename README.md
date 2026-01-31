@@ -2,6 +2,8 @@
 
 CLI та MCP сервер для планування маршрутів у Харківському метрополітені.
 
+<img src="assets/route_demo.png" alt="Default and simple CLI output for routes" width=350>
+
 ## Запуск та ініціалізація бази даних
 
 Проєкт використовує `uv`, наступні команди виконуються через `uv run metro`.

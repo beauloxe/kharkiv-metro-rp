@@ -1,4 +1,5 @@
 """Route command for metro CLI."""
+
 from __future__ import annotations
 
 import json
@@ -29,7 +30,8 @@ from .utils import _display_route_simple, _display_route_table, _get_db, console
     default=None,
 )
 @click.option(
-    "--day-type", "-d",
+    "--day-type",
+    "-s",
     type=click.Choice(["weekday", "weekend"]),
     help="Day type (overrides date)",
     default=None,
@@ -62,10 +64,10 @@ def route(
     """Find route between two stations."""
     # Initialize defaults
     fmt = "full"
-    
+
     try:
         config: Config = ctx.obj["config"]
-        
+
         # Use config defaults if not specified
         if lang is None:
             lang = config.get("preferences.language", "ua")
@@ -74,11 +76,11 @@ def route(
             fmt = config.get("preferences.route.format", "full")
         else:
             fmt = format
-        
+
         # Ensure lang is not None
         lang = lang or "ua"
         fmt = fmt or "full"
-        
+
         router = MetroRouter(db=_get_db(ctx))
 
         # Find stations
@@ -104,9 +106,7 @@ def route(
             year, month, day = map(int, date.split("-"))
             departure_time = datetime(year, month, day, hour, minute)
         else:
-            departure_time = datetime.now().replace(
-                hour=hour, minute=minute, second=0, microsecond=0
-            )
+            departure_time = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
 
         # Override day type if specified
         if day_type:

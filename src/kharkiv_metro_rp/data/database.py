@@ -118,6 +118,14 @@ class MetroDatabase:
 
             conn.commit()
 
+    def save_schedules(self, schedules: list[StationSchedule]) -> int:
+        """Save multiple schedules to database."""
+        count = 0
+        for schedule in schedules:
+            self.save_schedule(schedule)
+            count += len(schedule.entries)
+        return count
+
     def get_station_schedule(
         self,
         station_id: str,

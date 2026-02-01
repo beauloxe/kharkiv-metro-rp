@@ -1,4 +1,5 @@
 """MCP server for Kharkiv metro route planning."""
+
 from __future__ import annotations
 
 import asyncio
@@ -160,7 +161,9 @@ class MetroMCPServer:
         time_str = arguments.get("departure_time")
         if time_str:
             hour, minute = map(int, time_str.split(":"))
-            departure_time = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
+            departure_time = datetime.now().replace(
+                hour=hour, minute=minute, second=0, microsecond=0
+            )
         else:
             departure_time = datetime.now()
 
@@ -200,6 +203,7 @@ class MetroMCPServer:
             text = self._format_route_text(route, lang)
 
         import json
+
         return [
             TextContent(type="text", text=text),
             TextContent(type="text", text=json.dumps(result, indent=2, ensure_ascii=False)),
@@ -213,9 +217,13 @@ class MetroMCPServer:
         if route.departure_time and route.arrival_time:
             dep = route.departure_time.strftime("%H:%M")
             arr = route.arrival_time.strftime("%H:%M")
-            lines.append(f"Route: {dep} → {arr} ({route.total_duration_minutes} min, {route.num_transfers} transfers)")
+            lines.append(
+                f"Route: {dep} → {arr} ({route.total_duration_minutes} min, {route.num_transfers} transfers)"
+            )
         else:
-            lines.append(f"Route: {route.total_duration_minutes} min, {route.num_transfers} transfers")
+            lines.append(
+                f"Route: {route.total_duration_minutes} min, {route.num_transfers} transfers"
+            )
 
         lines.append("")
 
@@ -224,7 +232,9 @@ class MetroMCPServer:
             to_name = getattr(segment.to_station, name_attr)
 
             if segment.is_transfer:
-                lines.append(f"{i}. Transfer: {from_name} → {to_name} ({segment.duration_minutes} min)")
+                lines.append(
+                    f"{i}. Transfer: {from_name} → {to_name} ({segment.duration_minutes} min)"
+                )
             else:
                 line_name = getattr(segment.from_station.line, f"display_name_{lang}")
                 if segment.departure_time and segment.arrival_time:
@@ -232,7 +242,9 @@ class MetroMCPServer:
                     arr = segment.arrival_time.strftime("%H:%M")
                     lines.append(f"{i}. {line_name}: {from_name} → {to_name} ({dep} → {arr})")
                 else:
-                    lines.append(f"{i}. {line_name}: {from_name} → {to_name} ({segment.duration_minutes} min)")
+                    lines.append(
+                        f"{i}. {line_name}: {from_name} → {to_name} ({segment.duration_minutes} min)"
+                    )
 
         return "\n".join(lines)
 
@@ -357,7 +369,12 @@ class MetroMCPServer:
         lines = []
         for station in stations_data:
             from ..core.models import Line
-            line_name = Line(station["line"]).display_name_ua if lang == "ua" else Line(station["line"]).display_name_en
+
+            line_name = (
+                Line(station["line"]).display_name_ua
+                if lang == "ua"
+                else Line(station["line"]).display_name_en
+            )
             lines.append(f"{line_name}: {station[name_attr]}")
 
         return [TextContent(type="text", text="\n".join(lines))]

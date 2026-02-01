@@ -204,25 +204,24 @@ LINE_1_STATIONS = [
 # Line 2: Saltivska (Blue)
 LINE_2_STATIONS = [
     ("historical_museum", "Історичний музей", "Historical Museum"),
-    ("universytet", "Університет", "Universytet"),
-    ("pushkinska", "Пушкінська", "Pushkinska"),
+    ("university", "Університет", "Universytet"),
+    ("yaroslava_mudroho", "Ярослава Мудрого", "Yaroslava Mudroho"),
     ("kyivska", "Київська", "Kyivska"),
-    ("akademika_pavlova", "Академіка Павлова", "Akademika Pavlova"),
+    ("barabashova", "Академіка Барабашова", "Akademika Barabashova"),
+    ("pavlova", "Академіка Павлова", "Akademika Pavlova"),
     ("studentska", "Студентська", "Studentska"),
-    ("heroes_praci", "Героїв праці", "Heroiv Praci"),
-    ("traktornyi_zavod_2", "Тракторний завод (2)", "Traktornyi Zavod (2)"),
-    ("industrialna_2", "Індустріальна (2)", "Industrialna (2)"),
+    ("saltivska", "Салтівська", "Saltivska"),
 ]
 
 # Line 3: Oleksiivska (Green)
 LINE_3_STATIONS = [
     ("metrobudivnykiv", "Метробудівників", "Metrobudivnykiv"),
     ("zakhysnykiv_ukrainy", "Захисників України", "Zakhysnykiv Ukrainy"),
-    ("arvatska", "Архітектора Бекетова", "Arkhitektora Beketova"),
+    ("beketova", "Архітектора Бекетова", "Arkhitektora Beketova"),
     ("derzhprom", "Держпром", "Derzhprom"),
-    ("nauky", "Наукова", "Naukova"),
+    ("naukova", "Наукова", "Naukova"),
     ("botanichnyi_sad", "Ботанічний сад", "Botanichnyi Sad"),
-    ("23_serpnya", "23 Серпня", "23 Serpnia"),
+    ("23_serpnia", "23 Серпня", "23 Serpnia"),
     ("oleksiivska", "Олексіївська", "Oleksiivska"),
     ("peremoha", "Перемога", "Peremoha"),
 ]
@@ -233,8 +232,8 @@ TRANSFERS = {
     "historical_museum": "maidan_konstytutsii",
     "sportyvna": "metrobudivnykiv",
     "metrobudivnykiv": "sportyvna",
-    "universytet": "derzhprom",
-    "derzhprom": "universytet",
+    "university": "derzhprom",
+    "derzhprom": "university",
 }
 
 

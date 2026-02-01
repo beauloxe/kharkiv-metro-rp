@@ -23,6 +23,7 @@ for sid, station in create_stations().items():
 # Additional mappings for renamed stations (weekend schedules)
 _STATION_NAME_TO_ID["салтівська"] = "heroes_praci"  # Former "Героїв праці"
 _STATION_NAME_TO_ID["ярослава мудрого"] = "pushkinska"  # Former "Пушкінська"
+# FIX: what in the ai hallucination
 _STATION_NAME_TO_ID["академіка барабашова"] = "kyivska"  # Former "Київська"
 
 # URL mappings for lines
@@ -45,22 +46,22 @@ LINE_3_STATION_URLS = {
     DayType.WEEKDAY: {
         "metrobudivnykiv": "stantsiia-%C2%ABmetkrobudivnykiv%C2%BB.html",  # typo: metkrobudivnykiv
         "zakhysnykiv_ukrainy": "stantsiia-%C2%ABzakhysnykiv-ukkrainy%C2%BB.html",  # typo: ukkrainy
-        "arvatska": "stantsiia-%C2%ABakrkhitektokra-beketova%C2%BB.html",  # typo: akrkhitektokra
+        "beketova": "stantsiia-%C2%ABakrkhitektokra-beketova%C2%BB.html",  # typo: akrkhitektokra
         "derzhprom": "stantsiia-%C2%ABdekrzhpkrom%C2%BB.html",  # typo: dekrzhpkrom
-        "nauky": "stantsiia-%C2%ABnaukova%C2%BB.html",
+        "naukova": "stantsiia-%C2%ABnaukova%C2%BB.html",
         "botanichnyi_sad": "stantsiia-%C2%ABbotanichnyi-sad%C2%BB.html",
-        "23_serpnya": "stantsiia-%C2%AB23-sekrpnia%C2%BB.html",  # typo: sekrpnia
+        "23_serpnia": "stantsiia-%C2%AB23-sekrpnia%C2%BB.html",  # typo: sekrpnia
         "oleksiivska": "stantsiia-%C2%ABoleksiivska%C2%BB.html",
         "peremoha": "stantsiia-%C2%ABpekremoha%C2%BB.html",  # typo: pekremoha
     },
     DayType.WEEKEND: {
         "metrobudivnykiv": "stantsiia-%C2%ABmetkrobudivnykiv%C2%BB-(vykhidni-dni).html",
         "zakhysnykiv_ukrainy": "stantsiia-%C2%ABzakhysnykiv-ukkrainy%C2%BB-(vykhidni-dni).html",
-        "arvatska": "stantsiia-%C2%ABakrkhitektokra-beketova%C2%BB-(vykhidni-dni).html",
+        "beketova": "stantsiia-%C2%ABakrkhitektokra-beketova%C2%BB-(vykhidni-dni).html",
         "derzhprom": "stantsiia-%C2%ABdekrzhpkrom%C2%BB-(vykhidni-dni).html",
-        "nauky": "stantsiia-%C2%ABnaukova%C2%BB-(vykhidni-dni).html",
+        "naukova": "stantsiia-%C2%ABnaukova%C2%BB-(vykhidni-dni).html",
         "botanichnyi_sad": "stantsiia-%C2%ABbotanichnyi-sad%C2%BB-(vykhidni-dni).html",
-        "23_serpnya": "stantsiia-%C2%AB23-sekrpnia%C2%BB-(vykhidni-dni).html",
+        "23_serpnia": "stantsiia-%C2%AB23-sekrpnia%C2%BB-(vykhidni-dni).html",
         "oleksiivska": "stantsiia-%C2%ABoleksiivska%C2%BB-(vykhidni-dni).html",
         "peremoha": "stantsiia-%C2%ABpekremoha%C2%BB-(vykhidni-dni).html",
     },
@@ -70,11 +71,11 @@ LINE_3_STATION_URLS = {
 STATION_NAMES = {
     "metrobudivnykiv": "Метробудівників",
     "zakhysnykiv_ukrainy": "Захисників України",
-    "arvatska": "Архітектора Бекетова",
+    "beketova": "Архітектора Бекетова",
     "derzhprom": "Держпром",
-    "nauky": "Наукова",
+    "naukova": "Наукова",
     "botanichnyi_sad": "Ботанічний сад",
-    "23_serpnya": "23 Серпня",
+    "23_serpnia": "23 Серпня",
     "oleksiivska": "Олексіївська",
     "peremoha": "Перемога",
 }
@@ -92,7 +93,7 @@ STATION_URL_MAPPING = {
     "tukrboatom": "turboatom",
     "palats-spokrtu": "palats_sportu",
     "akrmiiska": "armiiska",
-    "im-o-s-maselskoho": "maselskoho",
+    "im.-o.s.-maselskoho": "maselskoho",
     "tkraktokrnyi-zavod": "traktornyi_zavod",
     "industkrialna": "industrialna",
     # Line 2
@@ -102,25 +103,24 @@ STATION_URL_MAPPING = {
     "pushkinska": "pushkinska",
     "yakroslava-mudkroho": "pushkinska",  # New name on weekend
     "kyivska": "kyivska",
-    "akademika-bakrabashova": "kyivska",  # New name on weekend
+    "akademika-bakrabashova": "akademika_barabashova",
     "akademika-pavlova": "akademika_pavlova",
     "studentska": "studentska",
-    "heroiv-praci": "heroes_praci",
-    "saltivska": "heroes_praci",  # New name on weekend
+    "heroiv-praci": "saltivska",
+    "saltivska": "saltivska",  # New name on weekend
     # Line 3
     "metrobudivnykiv": "metrobudivnykiv",
     "metkrobudivnykiv": "metrobudivnykiv",  # typo version
     "zakhysnykiv-ukrainy": "zakhysnykiv_ukrainy",
     "zakhysnykiv-ukkrainy": "zakhysnykiv_ukrainy",  # typo version
-    "arvatska": "arvatska",  # Архітектора Бекетова
-    "akrkhitektokra-beketova": "arvatska",  # typo version
+    "akrkhitektokra-beketova": "beketova",  # typo version
     "derzhprom": "derzhprom",
     "dekrzhpkrom": "derzhprom",  # typo version
-    "nauky": "nauky",
-    "naukova": "nauky",  # alternative name
+    "nauky": "naukova",
+    "naukova": "naukova",  # alternative name
     "botanichnyi-sad": "botanichnyi_sad",
-    "23-serpnia": "23_serpnya",
-    "23-sekrpnia": "23_serpnya",  # typo version
+    "23-serpnia": "23_serpnia",
+    "23-sekrpnia": "23_serpnia",  # typo version
     "oleksiivska": "oleksiivska",
     "peremoha": "peremoha",
     "pekremoha": "peremoha",  # typo version

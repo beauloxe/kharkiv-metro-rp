@@ -21,10 +21,9 @@ for sid, station in create_stations().items():
     _STATION_NAME_TO_ID[normalized] = sid
 
 # Additional mappings for renamed stations (weekend schedules)
-_STATION_NAME_TO_ID["салтівська"] = "heroes_praci"  # Former "Героїв праці"
-_STATION_NAME_TO_ID["ярослава мудрого"] = "pushkinska"  # Former "Пушкінська"
-# FIX: what in the ai hallucination
-_STATION_NAME_TO_ID["академіка барабашова"] = "kyivska"  # Former "Київська"
+_STATION_NAME_TO_ID["героїв праці"] = "saltivska"  # Former "Героїв праці"
+_STATION_NAME_TO_ID["пушкінська"] = "yaroslava_mudroho"  # Former "Пушкінська"
+_STATION_NAME_TO_ID["проспект гагаріна"] = "levada"  # Former "Проспект Гагаріна"
 
 # URL mappings for lines
 LINE_URLS = {
@@ -98,10 +97,10 @@ STATION_URL_MAPPING = {
     "industkrialna": "industrialna",
     # Line 2
     "istokrychnyi-muzei": "historical_museum",
-    "universytet": "universytet",
-    "univekrsytet": "universytet",  # Typo in weekend URL
-    "pushkinska": "pushkinska",
-    "yakroslava-mudkroho": "pushkinska",  # New name on weekend
+    "universytet": "university",
+    "univekrsytet": "university",  # Typo in weekend URL
+    "pushkinska": "yaroslava_mudroho",
+    "yakroslava-mudkroho": "yaroslava_mudroho",  # New name on weekend
     "kyivska": "kyivska",
     "akademika-bakrabashova": "akademika_barabashova",
     "akademika-pavlova": "akademika_pavlova",

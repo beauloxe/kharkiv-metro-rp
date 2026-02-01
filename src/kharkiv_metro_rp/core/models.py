@@ -171,9 +171,7 @@ class Route:
                         "name": getattr(seg.to_station, name_attr),
                         "line": getattr(seg.to_station.line, f"display_name_{lang}"),
                     },
-                    "departure_time": seg.departure_time.isoformat()
-                    if seg.departure_time
-                    else None,
+                    "departure_time": seg.departure_time.isoformat() if seg.departure_time else None,
                     "arrival_time": seg.arrival_time.isoformat() if seg.arrival_time else None,
                     "is_transfer": seg.is_transfer,
                     "duration_minutes": seg.duration_minutes,
@@ -234,6 +232,25 @@ TRANSFERS = {
     "metrobudivnykiv": "sportyvna",
     "university": "derzhprom",
     "derzhprom": "university",
+}
+
+# Alias station names -> actual station names (for backward compatibility)
+ALIAS_STATION_NAMES = {
+    # Ukrainian old names
+    "героїв праці": "Салтівська",
+    "проспект гагаріна": "Левада",
+    "пушкінська": "Ярослава Мудрого",
+    # Aliases
+    "23": "23 Серпня",
+    "барабашова": "Академіка Барабашова",
+    "бекетова": "Архітектора Бекетова",
+    "ботсад": "Ботанічний сад",
+    "гагаріна": "Левада",
+    "масельського": "Ім. О.С. Масельського",
+    "павлова": "Академіка Павлова",
+    "палац": "Палац спорту",
+    "хтз": "Тракторний завод",
+    # TODO: add English old names
 }
 
 

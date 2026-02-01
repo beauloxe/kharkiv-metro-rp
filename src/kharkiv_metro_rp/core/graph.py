@@ -1,15 +1,17 @@
 """Graph representation of metro network for pathfinding."""
+
 from __future__ import annotations
 
 import heapq
 from dataclasses import dataclass, field
 
-from .models import TRANSFERS, Line, Station, create_stations
+from .models import ALIAS_STATION_NAMES, TRANSFERS, Line, Station, create_stations
 
 
 @dataclass
 class Edge:
     """Edge in the metro graph."""
+
     to_station_id: str
     weight: float  # minutes
     is_transfer: bool = False
@@ -18,6 +20,7 @@ class Edge:
 @dataclass
 class GraphNode:
     """Node in the metro graph."""
+
     station_id: str
     edges: list[Edge] = field(default_factory=list)
 
@@ -63,24 +66,18 @@ class MetroGraph:
         for from_id, to_id in TRANSFERS.items():
             self._add_edge(from_id, to_id, self.TRANSFER_TIME_MINUTES, is_transfer=True)
 
-    def _add_edge(
-        self, from_id: str, to_id: str, weight: float, is_transfer: bool = False
-    ) -> None:
+    def _add_edge(self, from_id: str, to_id: str, weight: float, is_transfer: bool = False) -> None:
         """Add edge to graph."""
         if from_id in self.nodes:
-            self.nodes[from_id].edges.append(
-                Edge(to_station_id=to_id, weight=weight, is_transfer=is_transfer)
-            )
+            self.nodes[from_id].edges.append(Edge(to_station_id=to_id, weight=weight, is_transfer=is_transfer))
 
-    def find_shortest_path(
-        self, start_id: str, end_id: str
-    ) -> tuple[list[str], float] | None:
+    def find_shortest_path(self, start_id: str, end_id: str) -> tuple[list[str], float] | None:
         """Find shortest path using Dijkstra's algorithm."""
         if start_id not in self.nodes or end_id not in self.nodes:
             return None
 
         # Dijkstra's algorithm
-        distances: dict[str, float] = {sid: float('inf') for sid in self.nodes}
+        distances: dict[str, float] = {sid: float("inf") for sid in self.nodes}
         distances[start_id] = 0
         previous: dict[str, str | None] = dict.fromkeys(self.nodes)
         visited: set[str] = set()
@@ -111,7 +108,7 @@ class MetroGraph:
                     heapq.heappush(pq, (new_dist, neighbor_id))
 
         # Reconstruct path
-        if distances[end_id] == float('inf'):
+        if distances[end_id] == float("inf"):
             return None
 
         path = []
@@ -128,10 +125,16 @@ class MetroGraph:
         return self.stations.get(station_id)
 
     def find_station_by_name(self, name: str, lang: str = "ua") -> Station | None:
-        """Find station by name (fuzzy matching)."""
+        """Find station by name (fuzzy matching with old name support)."""
         name_lower = name.lower().strip()
         name_attr = f"name_{lang}"
 
+        # Check if it's an old name and resolve to new name
+        if name_lower in ALIAS_STATION_NAMES:
+            resolved_name = ALIAS_STATION_NAMES[name_lower]
+            name_lower = resolved_name.lower()
+
+        # Exact match
         for station in self.stations.values():
             station_name = getattr(station, name_attr).lower()
             if name_lower == station_name:

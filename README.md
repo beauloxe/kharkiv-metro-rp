@@ -40,23 +40,6 @@ metro init
 | `auto` | boolean | `true` | `true` - використовувати XDG директорію, `false` - використовувати `path` |
 | `path` | string | `null` | Абсолютний шлях до бази даних (використовується якщо `auto = false`). Підтримує `~` (домашня директорія) |
 
-**Приклади:**
-```toml
-# Варіант 1: XDG (рекомендовано)
-[database]
-auto = true
-
-# Варіант 2: Кастомний шлях
-[database]
-auto = false
-path = "~/Documents/metro.db"
-
-# Варіант 3: Абсолютний шлях
-[database]
-auto = false
-path = "/var/lib/kharkiv-metro/metro.db"
-```
-
 #### `[preferences]` - загальні налаштування
 
 | Опція | Тип | За замовчуванням | Можливі значення | Опис |
@@ -70,30 +53,12 @@ path = "/var/lib/kharkiv-metro/metro.db"
 |-------|-----|------------------|------------------|------|
 | `format` | string | `"full"` | `"full"`, `"simple"`, `"json"` | Формат виводу маршруту: full=детальна таблиця, simple=компактний inline, json=JSON |
 
-**Приклади:**
-```toml
-[preferences]
-language = "en"           # Англійська мова
-output_format = "table"   # Таблиця для stations/schedule
-
-[preferences.route]
-format = "simple"         # Компактний вивід для route команди
-output_format = "json"    # JSON формат замість таблиць
-```
-
 #### `[scraper]` - налаштування парсера сайту
 
 | Опція | Тип | За замовчуванням | Опис |
 |-------|-----|------------------|------|
 | `timeout` | integer | `30` | Таймаут HTTP запитів в секундах |
 | `user_agent` | string | `"kharkiv-metro-rp/1.0"` | User-Agent для HTTP запитів |
-
-**Приклади:**
-```toml
-[scraper]
-timeout = 60                          # Збільшити таймаут для повільного інтернету
-user_agent = "MyBot/1.0"              # Кастомний User-Agent
-```
 
 ### Повний приклад config.toml
 

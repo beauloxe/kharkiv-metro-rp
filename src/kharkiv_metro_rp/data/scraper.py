@@ -25,6 +25,12 @@ _STATION_NAME_TO_ID["героїв праці"] = "saltivska"  # Former "Геро
 _STATION_NAME_TO_ID["пушкінська"] = "yaroslava_mudroho"  # Former "Пушкінська"
 _STATION_NAME_TO_ID["проспект гагаріна"] = "levada"  # Former "Проспект Гагаріна"
 
+# Alternative names for stations
+_STATION_NAME_TO_ID["академіка барабашова"] = "barabashova"
+_STATION_NAME_TO_ID["барабашова"] = "barabashova"
+_STATION_NAME_TO_ID["академіка павлова"] = "pavlova"
+_STATION_NAME_TO_ID["павлова"] = "pavlova"
+
 # URL mappings for lines
 LINE_URLS = {
     DayType.WEEKDAY: {
@@ -102,8 +108,8 @@ STATION_URL_MAPPING = {
     "pushkinska": "yaroslava_mudroho",
     "yakroslava-mudkroho": "yaroslava_mudroho",  # New name on weekend
     "kyivska": "kyivska",
-    "akademika-bakrabashova": "akademika_barabashova",
-    "akademika-pavlova": "akademika_pavlova",
+    "akademika-bakrabashova": "barabashova",
+    "akademika-pavlova": "pavlova",
     "studentska": "studentska",
     "heroiv-praci": "saltivska",
     "saltivska": "saltivska",  # New name on weekend

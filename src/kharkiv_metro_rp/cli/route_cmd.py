@@ -11,7 +11,7 @@ from click.exceptions import Exit
 from ..config import Config
 from ..core.models import DayType
 from ..core.router import MetroRouter
-from .utils import _display_route_compact, _display_route_simple, _display_route_table, _get_db, console
+from .utils import _display_route_simple, _display_route_table, _get_db, console
 
 
 @click.command()
@@ -138,10 +138,7 @@ def route(
             }
             click.echo(json.dumps(result, indent=2, ensure_ascii=False))
         elif fmt == "simple":
-            if compact:
-                _display_route_compact(route, lang, console)
-            else:
-                _display_route_simple(route, lang, console)
+            _display_route_simple(route, lang, console, compact=compact)
         else:
             _display_route_table(route, lang, console, compact=compact)
 

@@ -107,25 +107,53 @@ def schedule(
             }
             click.echo(json.dumps(result, indent=2, ensure_ascii=False))
         else:
-            console.print(f"\n[bold cyan]{getattr(st, f'name_{lang}')}[/bold cyan]")
-            console.print(f"{_('Line', lang)}: {getattr(st.line, f'display_name_{lang}')}")
+            # console.print(f"[bold cyan]{getattr(st, f'name_{lang}')}[/bold cyan]")
+            # console.print(f"{_('Line', lang)}: {getattr(st.line, f'display_name_{lang}')}")
 
             name_attr = f"name_{lang}"
+
+            # Collect all schedules data
+            schedule_data = []
+            all_hours = set()
+
             for sch in schedules:
                 dir_st = router.stations.get(sch.direction_station_id)
                 if dir_st:
                     dir_name = getattr(dir_st, name_attr)
-                    console.print(f"\n[yellow]{_('Direction', lang)}: {dir_name}[/yellow]")
 
-                    by_hour = {}
+                    entries_by_hour = {}
                     for entry in sch.entries:
-                        if entry.hour not in by_hour:
-                            by_hour[entry.hour] = []
-                        by_hour[entry.hour].append(entry.minutes)
+                        if entry.hour not in entries_by_hour:
+                            entries_by_hour[entry.hour] = []
+                        entries_by_hour[entry.hour].append(entry.minutes)
+                        all_hours.add(entry.hour)
 
-                    for hour in sorted(by_hour.keys()):
-                        minutes_str = ", ".join(f"{m:02d}" for m in sorted(by_hour[hour]))
-                        console.print(f"  {hour:2d}: {minutes_str}")
+                    schedule_data.append((dir_name, entries_by_hour))
+
+            # Display directions side by side using table
+            if schedule_data:
+                from rich.table import Table
+
+                table = Table(show_header=True, header_style="bold yellow")
+
+                # Always show: Hour column + direction columns with minutes
+                table.add_column(_("Hour", lang))
+
+                for dir_name, unused in schedule_data:
+                    table.add_column(dir_name)
+
+                for hour in sorted(all_hours):
+                    row = [f"{hour:02d}"]
+                    for unused, entries_by_hour in schedule_data:
+                        minutes_list = entries_by_hour.get(hour, [])
+                        if minutes_list:
+                            minutes_str = ", ".join(f"{m:02d}" for m in sorted(minutes_list))
+                            row.append(minutes_str)
+                        else:
+                            row.append("")
+                    table.add_row(*row)
+
+                console.print(table)
 
     except Exception as e:
         if output == "json":

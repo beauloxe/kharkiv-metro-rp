@@ -104,8 +104,8 @@ class StationSchedule:
     entries: list[ScheduleEntry] = field(default_factory=list)
 
     def get_next_departures(self, after_time: time, limit: int = 3) -> list[ScheduleEntry]:
-        """Get next departures after given time."""
-        future = [e for e in self.entries if e.time > after_time]
+        """Get next departures at or after given time."""
+        future = [e for e in self.entries if e.time >= after_time]
         return sorted(future)[:limit]
 
     def get_departures_between(self, start_time: time, end_time: time) -> list[ScheduleEntry]:

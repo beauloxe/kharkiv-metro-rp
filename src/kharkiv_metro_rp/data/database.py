@@ -1,4 +1,5 @@
 """SQLite database for metro schedules."""
+
 from __future__ import annotations
 
 import sqlite3
@@ -60,7 +61,7 @@ class MetroDatabase:
 
             # Create indexes
             cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_schedules_station 
+                CREATE INDEX IF NOT EXISTS idx_schedules_station
                 ON schedules(station_id, direction_station_id, day_type)
             """)
 
@@ -72,18 +73,21 @@ class MetroDatabase:
             cursor = conn.cursor()
 
             for station in stations:
-                cursor.execute("""
-                    INSERT OR REPLACE INTO stations 
+                cursor.execute(
+                    """
+                    INSERT OR REPLACE INTO stations
                     (id, name_ua, name_en, line, station_order, transfer_to)
                     VALUES (?, ?, ?, ?, ?, ?)
-                """, (
-                    station["id"],
-                    station["name_ua"],
-                    station["name_en"],
-                    station["line"],
-                    station["order"],
-                    station.get("transfer_to"),
-                ))
+                """,
+                    (
+                        station["id"],
+                        station["name_ua"],
+                        station["name_en"],
+                        station["line"],
+                        station["order"],
+                        station.get("transfer_to"),
+                    ),
+                )
 
             conn.commit()
 
@@ -93,28 +97,34 @@ class MetroDatabase:
             cursor = conn.cursor()
 
             # Delete existing entries for this schedule
-            cursor.execute("""
-                DELETE FROM schedules 
+            cursor.execute(
+                """
+                DELETE FROM schedules
                 WHERE station_id = ? AND direction_station_id = ? AND day_type = ?
-            """, (
-                schedule.station_id,
-                schedule.direction_station_id,
-                schedule.day_type.value,
-            ))
-
-            # Insert new entries
-            for entry in schedule.entries:
-                cursor.execute("""
-                    INSERT INTO schedules 
-                    (station_id, direction_station_id, day_type, hour, minutes)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (
+            """,
+                (
                     schedule.station_id,
                     schedule.direction_station_id,
                     schedule.day_type.value,
-                    entry.hour,
-                    entry.minutes,
-                ))
+                ),
+            )
+
+            # Insert new entries
+            for entry in schedule.entries:
+                cursor.execute(
+                    """
+                    INSERT INTO schedules
+                    (station_id, direction_station_id, day_type, hour, minutes)
+                    VALUES (?, ?, ?, ?, ?)
+                """,
+                    (
+                        schedule.station_id,
+                        schedule.direction_station_id,
+                        schedule.day_type.value,
+                        entry.hour,
+                        entry.minutes,
+                    ),
+                )
 
             conn.commit()
 
@@ -136,11 +146,14 @@ class MetroDatabase:
         with self._get_connection() as conn:
             cursor = conn.cursor()
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT hour, minutes FROM schedules
                 WHERE station_id = ? AND direction_station_id = ? AND day_type = ?
                 ORDER BY hour, minutes
-            """, (station_id, direction_station_id, day_type.value))
+            """,
+                (station_id, direction_station_id, day_type.value),
+            )
 
             rows = cursor.fetchall()
             if not rows:
@@ -167,37 +180,41 @@ class MetroDatabase:
         with self._get_connection() as conn:
             cursor = conn.cursor()
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT hour, minutes FROM schedules
                 WHERE station_id = ? AND direction_station_id = ? AND day_type = ?
-                AND (hour > ? OR (hour = ? AND minutes > ?))
+                AND (hour > ? OR (hour = ? AND minutes >= ?))
                 ORDER BY hour, minutes
                 LIMIT ?
-            """, (
-                station_id,
-                direction_station_id,
-                day_type.value,
-                after_time.hour,
-                after_time.hour,
-                after_time.minute,
-                limit,
-            ))
+            """,
+                (
+                    station_id,
+                    direction_station_id,
+                    day_type.value,
+                    after_time.hour,
+                    after_time.hour,
+                    after_time.minute,
+                    limit,
+                ),
+            )
 
             rows = cursor.fetchall()
             return [ScheduleEntry(hour=r["hour"], minutes=r["minutes"]) for r in rows]
 
-    def get_all_schedules_for_station(
-        self, station_id: str, day_type: DayType
-    ) -> list[StationSchedule]:
+    def get_all_schedules_for_station(self, station_id: str, day_type: DayType) -> list[StationSchedule]:
         """Get all schedules (all directions) for a station."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
 
-            cursor.execute("""
-                SELECT DISTINCT direction_station_id 
+            cursor.execute(
+                """
+                SELECT DISTINCT direction_station_id
                 FROM schedules
                 WHERE station_id = ? AND day_type = ?
-            """, (station_id, day_type.value))
+            """,
+                (station_id, day_type.value),
+            )
 
             directions = [r["direction_station_id"] for r in cursor.fetchall()]
 
@@ -214,9 +231,12 @@ class MetroDatabase:
         with self._get_connection() as conn:
             cursor = conn.cursor()
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT * FROM stations WHERE id = ?
-            """, (station_id,))
+            """,
+                (station_id,),
+            )
 
             row = cursor.fetchone()
             if row:
@@ -239,8 +259,11 @@ class MetroDatabase:
         with self._get_connection() as conn:
             cursor = conn.cursor()
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT * FROM stations WHERE line = ? ORDER BY station_order
-            """, (line,))
+            """,
+                (line,),
+            )
 
             return [dict(row) for row in cursor.fetchall()]

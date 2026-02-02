@@ -9,7 +9,7 @@ from rich.table import Table
 
 from ..config import Config
 from ..core.models import Line
-from .utils import _get_db, console
+from .utils import _get_db, console, _
 
 
 @click.command()
@@ -43,13 +43,13 @@ def stations(
     """List all stations."""
     try:
         config: Config = ctx.obj["config"]
-        
+
         # Use config defaults if not specified
         if lang is None:
             lang = config.get("preferences.language", "ua")
         if output is None:
             output = config.get("preferences.output_format", "table")
-        
+
         db = _get_db(ctx)
         name_attr = f"name_{lang}"
 
@@ -78,8 +78,8 @@ def stations(
             click.echo(json.dumps(result, indent=2, ensure_ascii=False))
         else:
             table = Table(show_header=True, header_style="bold magenta")
-            table.add_column("Line")
-            table.add_column("Station")
+            table.add_column(_("Line", lang))
+            table.add_column(_("Station", lang))
 
             for s in stations_data:
                 line_name = (

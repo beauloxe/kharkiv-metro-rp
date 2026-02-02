@@ -71,11 +71,9 @@ def route(
         # Use config defaults if not specified
         if lang is None:
             lang = config.get("preferences.language", "ua")
-        if format is None:
-            # Check preferences.route.format first, fallback to "full"
-            fmt = config.get("preferences.route.format", "full")
-        else:
-            fmt = format
+
+        # Check preferences.route.format first, fallback to "full"
+        fmt = config.get("preferences.route.format", "full") if format is None else format
 
         # Ensure lang is not None
         lang = lang or "ua"
@@ -109,10 +107,7 @@ def route(
             departure_time = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
 
         # Override day type if specified
-        if day_type:
-            dt = DayType.WEEKDAY if day_type == "weekday" else DayType.WEEKEND
-        else:
-            dt = None
+        dt = (DayType.WEEKDAY if day_type == "weekday" else DayType.WEEKEND) if day_type else None
 
         # Find route
         route = router.find_route(from_st.id, to_st.id, departure_time, dt)

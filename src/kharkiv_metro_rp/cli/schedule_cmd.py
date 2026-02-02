@@ -11,7 +11,7 @@ from click.exceptions import Exit
 from ..config import Config
 from ..core.models import DayType
 from ..core.router import MetroRouter
-from .utils import _get_db, console
+from .utils import _, _get_db, console
 
 
 @click.command()
@@ -108,14 +108,14 @@ def schedule(
             click.echo(json.dumps(result, indent=2, ensure_ascii=False))
         else:
             console.print(f"\n[bold cyan]{getattr(st, f'name_{lang}')}[/bold cyan]")
-            console.print(f"Line: {getattr(st.line, f'display_name_{lang}')}")
+            console.print(f"{_('Line', lang)}: {getattr(st.line, f'display_name_{lang}')}")
 
             name_attr = f"name_{lang}"
             for sch in schedules:
                 dir_st = router.stations.get(sch.direction_station_id)
                 if dir_st:
                     dir_name = getattr(dir_st, name_attr)
-                    console.print(f"\n[yellow]Direction: {dir_name}[/yellow]")
+                    console.print(f"\n[yellow]{_('Direction', lang)}: {dir_name}[/yellow]")
 
                     by_hour = {}
                     for entry in sch.entries:

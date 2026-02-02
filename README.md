@@ -2,7 +2,7 @@
 
 CLI та MCP сервер для планування маршрутів у Харківському метрополітені.
 
-<img src="assets/route_demo.png" alt="Default and simple CLI output for routes" width=500>
+![Default and simple CLI output for routes](assets/route_demo.gif)
 
 ## Особливості
 
@@ -29,7 +29,6 @@ CLI та MCP сервер для планування маршрутів у Ха
       - Павлова: Академіка Павлова
       - Палац: Палац спорту
       - ХТЗ: Тракторний завод
-      
     </details>
 
 ## Запуск та ініціалізація бази даних

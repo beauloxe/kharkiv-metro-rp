@@ -150,7 +150,7 @@ def _get_db(ctx: click.Context) -> MetroDatabase:
     return _auto_init_xdg(config)
 
 
-def _display_route_table(route: Route, lang: str, console: Console) -> None:
+def _display_route_table(route: Route, lang: str, console: Console, compact: bool = False) -> None:
     """Display route in table format."""
     name_attr = f"name_{lang}"
 
@@ -174,27 +174,78 @@ def _display_route_table(route: Route, lang: str, console: Console) -> None:
     table.add_column(_("Line", lang))
     table.add_column(_("Time", lang))
 
-    for segment in route.segments:
-        from_name = getattr(segment.from_station, name_attr)
-        to_name = getattr(segment.to_station, name_attr)
+    if compact:
+        # Group segments by line, showing only start/end for each line section
+        i = 0
+        while i < len(route.segments):
+            segment = route.segments[i]
 
-        if segment.is_transfer:
-            seg_type = f"[yellow]{_('Transfer', lang)}[/yellow]"
-            time_str = f"{segment.duration_minutes} {_('min', lang)}"
-        else:
-            line = segment.from_station.line
-            line_name = getattr(line, f"display_name_{lang}")
-            color = line.color
-            seg_type = f"[{color}]{line_name}[/{color}]"
-
-            if segment.departure_time and segment.arrival_time:
-                dep = segment.departure_time.strftime("%H:%M")
-                arr = segment.arrival_time.strftime("%H:%M")
-                time_str = f"{dep} → {arr} ({segment.duration_minutes} {_('min', lang)})"
-            else:
+            if segment.is_transfer:
+                # Transfer segment - show individually
+                from_name = getattr(segment.from_station, name_attr)
+                to_name = getattr(segment.to_station, name_attr)
+                seg_type = f"[yellow]{_('Transfer', lang)}[/yellow]"
                 time_str = f"{segment.duration_minutes} {_('min', lang)}"
+                table.add_row(from_name, to_name, seg_type, time_str)
+                i += 1
+            else:
+                # Train segment - find all consecutive segments on same line
+                line = segment.from_station.line
+                line_name = getattr(line, f"display_name_{lang}")
+                color = line.color
+                seg_type = f"[{color}]{line_name}[/{color}]"
 
-        table.add_row(from_name, to_name, seg_type, time_str)
+                # Start of this line section
+                start_station = segment.from_station
+                start_time = segment.departure_time
+
+                # Find end of this line section
+                end_station = segment.to_station
+                end_time = segment.arrival_time
+                total_segment_time = segment.duration_minutes
+
+                i += 1
+                while i < len(route.segments) and not route.segments[i].is_transfer:
+                    # Continue on same line
+                    end_station = route.segments[i].to_station
+                    end_time = route.segments[i].arrival_time
+                    total_segment_time += route.segments[i].duration_minutes
+                    i += 1
+
+                from_name = getattr(start_station, name_attr)
+                to_name = getattr(end_station, name_attr)
+
+                if start_time and end_time:
+                    dep = start_time.strftime("%H:%M")
+                    arr = end_time.strftime("%H:%M")
+                    time_str = f"{dep} → {arr} ({total_segment_time} {_('min', lang)})"
+                else:
+                    time_str = f"{total_segment_time} {_('min', lang)}"
+
+                table.add_row(from_name, to_name, seg_type, time_str)
+    else:
+        # Full mode - show every segment
+        for segment in route.segments:
+            from_name = getattr(segment.from_station, name_attr)
+            to_name = getattr(segment.to_station, name_attr)
+
+            if segment.is_transfer:
+                seg_type = f"[yellow]{_('Transfer', lang)}[/yellow]"
+                time_str = f"{segment.duration_minutes} {_('min', lang)}"
+            else:
+                line = segment.from_station.line
+                line_name = getattr(line, f"display_name_{lang}")
+                color = line.color
+                seg_type = f"[{color}]{line_name}[/{color}]"
+
+                if segment.departure_time and segment.arrival_time:
+                    dep = segment.departure_time.strftime("%H:%M")
+                    arr = segment.arrival_time.strftime("%H:%M")
+                    time_str = f"{dep} → {arr} ({segment.duration_minutes} {_('min', lang)})"
+                else:
+                    time_str = f"{segment.duration_minutes} {_('min', lang)}"
+
+            table.add_row(from_name, to_name, seg_type, time_str)
 
     console.print(table)
 
@@ -204,25 +255,32 @@ def _display_route_simple(route: Route, lang: str, console: Console) -> None:
     name_attr = f"name_{lang}"
 
     # Build the path showing all stations
+    # Only first station of each line is colored
     path_parts = []
     added_stations = set()
+    current_line = None
 
     if route.segments:
         first_station = route.segments[0].from_station
         first_name = getattr(first_station, name_attr)
-        path_parts.append(first_name)
+        first_color = first_station.line.color
+        path_parts.append(f"[{first_color}]{first_name}[/{first_color}]")
         added_stations.add(first_name)
+        current_line = first_station.line
 
     for segment in route.segments:
         to_name = getattr(segment.to_station, name_attr)
 
         if segment.is_transfer:
+            # Transfer - new line starts, color this station
             transfer_line = segment.to_station.line
             transfer_color = transfer_line.color
             path_parts.append(f"[{transfer_color}]{to_name}[/{transfer_color}]")
             added_stations.add(to_name)
+            current_line = transfer_line
         else:
             if to_name not in added_stations:
+                # Same line - plain text, not colored
                 path_parts.append(to_name)
                 added_stations.add(to_name)
 
@@ -239,5 +297,62 @@ def _display_route_simple(route: Route, lang: str, console: Console) -> None:
 
     transfers_str = _plural_transfers(transfers, lang)
 
-    console.print(f"{path_str}")
     console.print(f"[dim]{time_str} | {transfers_str}[/dim]")
+    console.print(f"{path_str}")
+
+
+def _display_route_compact(route: Route, lang: str, console: Console) -> None:
+    """Display route showing only key stations (start, transfers, end)."""
+    name_attr = f"name_{lang}"
+
+    # Build key points: start, transfers, end
+    key_points = []
+
+    if not route.segments:
+        return
+
+    # Start station
+    first_station = route.segments[0].from_station
+    first_name = getattr(first_station, name_attr)
+    first_color = first_station.line.color
+    key_points.append(f"[{first_color}]{first_name}[/{first_color}]")
+
+    # Track transfers - only first station of each line is colored
+    for segment in route.segments:
+        if segment.is_transfer:
+            # Transfer from station (plain, not first on its line)
+            from_name = getattr(segment.from_station, name_attr)
+            key_points.append(from_name)
+
+            # Transfer to station (first on new line, so colored)
+            to_name = getattr(segment.to_station, name_attr)
+            to_color = segment.to_station.line.color
+            key_points.append(f"[{to_color}]{to_name}[/{to_color}]")
+
+    # End station (if not already added as transfer)
+    last_segment = route.segments[-1]
+    last_station = last_segment.to_station
+    last_name = getattr(last_station, name_attr)
+
+    # Only add end if it's different from last key point
+    if not last_segment.is_transfer:
+        # Last station is not first on its line, so plain text
+        key_points.append(last_name)
+
+    # Build path string
+    path_str = " → ".join(key_points)
+    total_time = route.total_duration_minutes
+    transfers = route.num_transfers
+
+    # Time info
+    if route.departure_time and route.arrival_time:
+        dep = route.departure_time.strftime("%H:%M")
+        arr = route.arrival_time.strftime("%H:%M")
+        time_str = f"{dep} → {arr} ({total_time} {_('min', lang)})"
+    else:
+        time_str = f"{total_time} {_('min', lang)}"
+
+    transfers_str = _plural_transfers(transfers, lang)
+
+    console.print(f"[dim]{time_str} | {transfers_str}[/dim]")
+    console.print(f"{path_str}")

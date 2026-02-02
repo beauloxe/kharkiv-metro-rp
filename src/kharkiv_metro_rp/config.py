@@ -1,4 +1,5 @@
 """Configuration management for Kharkiv Metro Route Planner."""
+
 from __future__ import annotations
 
 import os
@@ -21,7 +22,8 @@ language = "ua"
 output_format = "table"
 
 [preferences.route]
-format = "full"  # "full" (table), "simple" (compact), or "json"
+format = "full"  # "full" (table), "simple" (inline), or "json"
+compact = false  # true = show only key stations (start, transfers, end)
 
 [scraper]
 timeout = 30
@@ -71,6 +73,7 @@ class Config:
             else:
                 # Older toml library - reads text
                 import toml
+
                 with open(self.config_file, encoding="utf-8") as f:
                     self._config = toml.load(f)
         else:
@@ -82,6 +85,7 @@ class Config:
             return tomllib.loads(DEFAULT_CONFIG)
         else:
             import toml
+
             return toml.loads(DEFAULT_CONFIG)
 
     def ensure_dirs(self) -> None:
@@ -121,6 +125,7 @@ class Config:
     def _save(self) -> None:
         """Save configuration to file."""
         import toml
+
         with open(self.config_file, "w", encoding="utf-8") as f:
             toml.dump(self._config, f)
 

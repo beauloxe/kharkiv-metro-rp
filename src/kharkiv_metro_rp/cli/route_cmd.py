@@ -11,7 +11,7 @@ from click.exceptions import Exit
 from ..config import Config
 from ..core.models import DayType
 from ..core.router import MetroRouter
-from .utils import _display_route_simple, _display_route_table, _get_db, console
+from .utils import _display_route_compact, _display_route_simple, _display_route_table, _get_db, console
 
 
 @click.command()
@@ -48,7 +48,13 @@ from .utils import _display_route_simple, _display_route_table, _get_db, console
     "-f",
     type=click.Choice(["full", "simple", "json"]),
     default=None,
-    help="Output format (full=detailed table, simple=compact inline, json=JSON)",
+    help="Output format (full=detailed table, simple=inline, json=JSON)",
+)
+@click.option(
+    "--compact",
+    "-c",
+    is_flag=True,
+    help="Show only key stations (start, transfers, end)",
 )
 @click.pass_context
 def route(
@@ -60,6 +66,7 @@ def route(
     day_type: str | None,
     lang: str | None,
     format: str | None,
+    compact: bool,
 ) -> None:
     """Find route between two stations."""
     # Initialize defaults
@@ -74,6 +81,12 @@ def route(
 
         # Check preferences.route.format first, fallback to "full"
         fmt = config.get("preferences.route.format", "full") if format is None else format
+
+        # CLI flag inverts the config setting
+        # If config compact=true, --compact shows full version
+        # If config compact=false (default), --compact shows compact version
+        config_compact = config.get("preferences.route.compact", False)
+        compact = (not config_compact) if compact else config_compact
 
         # Ensure lang is not None
         lang = lang or "ua"
@@ -125,9 +138,12 @@ def route(
             }
             click.echo(json.dumps(result, indent=2, ensure_ascii=False))
         elif fmt == "simple":
-            _display_route_simple(route, lang, console)
+            if compact:
+                _display_route_compact(route, lang, console)
+            else:
+                _display_route_simple(route, lang, console)
         else:
-            _display_route_table(route, lang, console)
+            _display_route_table(route, lang, console, compact=compact)
 
     except Exception as e:
         if fmt == "json":

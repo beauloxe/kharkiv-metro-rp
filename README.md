@@ -56,6 +56,13 @@ metro route "Холодна гора" "Студентська" --output json
 
 # Англійською мовою
 metro route "Kholodna Hora" "Heroiv Praci" --lang en
+
+# Компактний вивід (тільки ключові станції: початок, пересадки, кінець)
+metro route "Холодна гора" "Студентська" --compact
+
+# Повний вивід (всі станції) - якщо в конфігу compact=true
+metro config set preferences.route.compact true
+metro route "Холодна гора" "Студентська" --compact
 ```
 
 ### Перегляд розкладу
@@ -117,6 +124,7 @@ metro stations -l s # "k", "o"
 | Опція | Тип | За замовчуванням | Можливі значення | Опис |
 |-------|-----|------------------|------------------|------|
 | `format` | string | `"full"` | `"full"`, `"simple"`, `"json"` | Формат виводу маршруту: full=детальна таблиця, simple=компактний inline, json=JSON |
+| `compact` | boolean | `false` | `true`, `false` | `true` - показувати тільки ключові станції (початок, пересадки, кінець), `false` - всі станції. Працює з форматами `full` та `simple` |
 
 #### `[scraper]` - налаштування парсера сайту
 
@@ -138,6 +146,7 @@ output_format = "table"
 
 [preferences.route]
 format = "full"
+compact = false
 
 [scraper]
 timeout = 30

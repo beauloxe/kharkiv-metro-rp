@@ -1,8 +1,8 @@
 Output route_demo.gif
 
 Set FontSize 16
-Set Width 1200
-Set Height 600
+Set Width 1000
+Set Height 400
 
 Type "uv run metro route палац держпром -t 07:24 -s weekday -f full"
 

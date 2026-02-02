@@ -1,4 +1,5 @@
 """Stations command for metro CLI."""
+
 from __future__ import annotations
 
 import json
@@ -9,7 +10,7 @@ from rich.table import Table
 
 from ..config import Config
 from ..core.models import Line
-from .utils import _get_db, console, _
+from .utils import _, _get_db, console
 
 
 @click.command()
@@ -69,9 +70,7 @@ def stations(
                 {
                     "id": s["id"],
                     "name": s[name_attr],
-                    "line": Line(s["line"]).display_name_ua
-                    if lang == "ua"
-                    else Line(s["line"]).display_name_en,
+                    "line": Line(s["line"]).display_name_ua if lang == "ua" else Line(s["line"]).display_name_en,
                 }
                 for s in stations_data
             ]
@@ -82,11 +81,7 @@ def stations(
             table.add_column(_("Station", lang))
 
             for s in stations_data:
-                line_name = (
-                    Line(s["line"]).display_name_ua
-                    if lang == "ua"
-                    else Line(s["line"]).display_name_en
-                )
+                line_name = Line(s["line"]).display_name_ua if lang == "ua" else Line(s["line"]).display_name_en
                 table.add_row(line_name, s[name_attr])
 
             console.print(table)

@@ -266,24 +266,20 @@ def _display_route_simple(route: Route, lang: str, console: Console, compact: bo
         return
 
     if compact:
-        # Compact mode - only key stations (start, transfers, end)
-        # Start station
+        # Compact mode - build path string incrementally with transfer indicators
         first_station = route.segments[0].from_station
         first_name = getattr(first_station, name_attr)
         first_color = first_station.line.color
-        path_parts.append(f"[{first_color}]{first_name}[/{first_color}]")
+        path_str = f"[{first_color}]{first_name}[/{first_color}]"
 
-        # Track transfers - only first station of each line is colored
         for segment in route.segments:
             if segment.is_transfer:
-                # Transfer from station (plain, not first on its line)
+                # Transfer segment: from_station is where we exit, to_station is where we enter new line
                 from_name = getattr(segment.from_station, name_attr)
-                path_parts.append(from_name)
-
-                # Transfer to station (first on new line, so colored)
                 to_name = getattr(segment.to_station, name_attr)
                 to_color = segment.to_station.line.color
-                path_parts.append(f"[{to_color}]{to_name}[/{to_color}]")
+
+                path_str += f" → {from_name} ⇌ [{to_color}]{to_name}[/{to_color}]"
 
         # End station (if not already added as transfer)
         last_segment = route.segments[-1]
@@ -291,38 +287,37 @@ def _display_route_simple(route: Route, lang: str, console: Console, compact: bo
         last_name = getattr(last_station, name_attr)
 
         if not last_segment.is_transfer:
-            # Last station is not first on its line, so plain text
-            path_parts.append(last_name)
+            path_str += f" → {last_name}"
     else:
-        # Full mode - all stations, only first station of each line is colored
+        # Full mode - all stations with transfer indicators
         added_stations = set()
 
         first_station = route.segments[0].from_station
         first_name = getattr(first_station, name_attr)
         first_color = first_station.line.color
-        path_parts.append(f"[{first_color}]{first_name}[/{first_color}]")
+        path_str = f"[{first_color}]{first_name}[/{first_color}]"
         added_stations.add(first_name)
 
         for segment in route.segments:
             to_name = getattr(segment.to_station, name_attr)
 
+            if to_name in added_stations:
+                continue
+
             if segment.is_transfer:
-                # Transfer - new line starts, color this station
+                # Transfer - use double arrow and color the station
                 transfer_line = segment.to_station.line
                 transfer_color = transfer_line.color
-                path_parts.append(f"[{transfer_color}]{to_name}[/{transfer_color}]")
-                added_stations.add(to_name)
+                path_str += f" ⇌ [{transfer_color}]{to_name}[/{transfer_color}]"
             else:
-                if to_name not in added_stations:
-                    # Same line - plain text, not colored
-                    path_parts.append(to_name)
-                    added_stations.add(to_name)
+                # Same line - use single arrow, plain text
+                path_str += f" → {to_name}"
+
+            added_stations.add(to_name)
 
     total_time = route.total_duration_minutes
     transfers = route.num_transfers
     transfers_str = _plural_transfers(transfers, lang)
-
-    path_str = " → ".join(path_parts)
 
     # Build time info for each line segment (segmented for simple mode)
     time_parts = []

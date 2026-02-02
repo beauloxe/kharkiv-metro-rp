@@ -1,21 +1,32 @@
 Output route_demo.gif
+Set Theme "Tomorrow Night"
+Set FontFamily "IosevkaTerm Nerd Font Mono"
 
-Set FontSize 16
-Set Width 1000
-Set Height 400
+Set LetterSpacing 2
+Set FontSize 18
+Set Width 1200
+Set Height 600
 
-Type "uv run metro route палац держпром -t 07:24 -s weekday -f full"
-
-Sleep 300ms
-
+Type "metro route салтівська турбоатом -t 07:25 -s weekday -f full"
 Enter
 
-Sleep 1s
+Sleep 1.3s
 
-Type "uv run metro route палац держпром -t 07:24 -s weekday -f simple"
+Type "metro route салтівська турбоатом -t 07:25 -s weekday -f simple"
+Enter
 
+Sleep 2.3s
+
+Type "metro config set preferences.route.compact true"
+Enter
 Sleep 300ms
 
+Type "metro route салтівська турбоатом -t 07:25 -s weekday -f full"
+Enter
+
+Sleep 1.3s
+
+Type "metro route салтівська турбоатом -t 07:25 -s weekday -f simple"
 Enter
 
 Sleep 10s

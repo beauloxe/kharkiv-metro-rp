@@ -1,0 +1,8 @@
+[deploy]
+startCommand = "uv run metro-bot"
+
+[mounts]
+/data = "data"
+
+[env]
+DB_PATH = "/data/metro.db"

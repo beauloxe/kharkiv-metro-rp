@@ -1,7 +1,6 @@
 """Utility functions for the Telegram bot."""
 
 import hashlib
-import os
 from datetime import datetime
 from pathlib import Path
 
@@ -11,7 +10,7 @@ from kharkiv_metro_rp.core.router import MetroRouter
 from kharkiv_metro_rp.data.database import MetroDatabase
 from kharkiv_metro_rp.data.initializer import init_database
 
-from .constants import LINE_COLOR_EMOJI, LINE_NAME_EMOJI, LINE_ORDER, TIMEZONE
+from .constants import DB_PATH, LINE_COLOR_EMOJI, LINE_NAME_EMOJI, LINE_ORDER, TIMEZONE
 
 
 def now() -> datetime:
@@ -20,21 +19,12 @@ def now() -> datetime:
 
 
 def get_db_path() -> str:
-    """Get database path from environment or Config."""
-    # Environment variable takes priority (useful for Railway, Docker, etc.)
-    db_path = os.getenv("DB_PATH")
-    if db_path:
-        print(f"[DB] Using DB_PATH from environment: {db_path}")
-        # Ensure parent directory exists
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-        return db_path
-
-    # Fallback to Config default
-    config = Config()
-    config.ensure_dirs()
-    fallback_path = config.get_db_path()
-    print(f"[DB] Using default path: {fallback_path}")
-    return fallback_path
+    """Get database path from constants."""
+    # Use centralized DB_PATH constant
+    print(f"[DB] Using database path: {DB_PATH}")
+    # Ensure parent directory exists
+    Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
+    return DB_PATH
 
 
 def get_router() -> MetroRouter:

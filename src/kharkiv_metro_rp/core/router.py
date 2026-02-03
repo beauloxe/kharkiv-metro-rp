@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
+from ..bot.constants import DB_PATH
 from ..data.database import MetroDatabase
 from .graph import MetroGraph
 from .models import (
@@ -24,7 +25,7 @@ class MetroRouter:
         db: MetroDatabase | None = None,
         graph: MetroGraph | None = None,
     ) -> None:
-        self.db = db or MetroDatabase()
+        self.db = db or MetroDatabase(DB_PATH)
         self.graph = graph or MetroGraph()
         self.stations = self.graph.stations
 
@@ -149,9 +150,7 @@ class MetroRouter:
                 # Try to find when a train arrives at the next station heading same direction
                 arrival_time: datetime | None = None
                 if direction:
-                    arrival_time = self._calculate_arrival_time(
-                        to_id, direction, day_type, current_time
-                    )
+                    arrival_time = self._calculate_arrival_time(to_id, direction, day_type, current_time)
 
                 if arrival_time:
                     travel_time = int((arrival_time - current_time).total_seconds() / 60)
@@ -173,9 +172,7 @@ class MetroRouter:
 
         # Calculate total duration
         if segments and segments[0].departure_time and segments[-1].arrival_time:
-            total_duration = int(
-                (segments[-1].arrival_time - segments[0].departure_time).total_seconds() / 60
-            )
+            total_duration = int((segments[-1].arrival_time - segments[0].departure_time).total_seconds() / 60)
             departure = segments[0].departure_time
             arrival = segments[-1].arrival_time
         else:
@@ -236,17 +233,11 @@ class MetroRouter:
             last_order = self.stations[line_stations[-1]].order
 
             # Find terminal stations for this line (first and last on the line)
-            line_stations_all = [
-                sid for sid, station in self.stations.items() if station.line == line
-            ]
+            line_stations_all = [sid for sid, station in self.stations.items() if station.line == line]
             min_order = min(self.stations[sid].order for sid in line_stations_all)
             max_order = max(self.stations[sid].order for sid in line_stations_all)
-            first_terminal = next(
-                sid for sid in line_stations_all if self.stations[sid].order == min_order
-            )
-            last_terminal = next(
-                sid for sid in line_stations_all if self.stations[sid].order == max_order
-            )
+            first_terminal = next(sid for sid in line_stations_all if self.stations[sid].order == min_order)
+            last_terminal = next(sid for sid in line_stations_all if self.stations[sid].order == max_order)
 
             if last_order > first_order:
                 return last_terminal  # Going forward - return last terminal

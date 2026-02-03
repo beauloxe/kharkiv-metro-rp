@@ -1,6 +1,7 @@
 """Constants for the Telegram bot."""
 
 import os
+from pathlib import Path
 from typing import Final
 from zoneinfo import ZoneInfo
 
@@ -66,6 +67,9 @@ class ButtonText:
 
 # Timezone setting (from TZ env var, fallback to Europe/Kyiv)
 TIMEZONE: Final[ZoneInfo] = ZoneInfo(os.getenv("TZ", "Europe/Kyiv"))
+
+# Database path (from DB_PATH env var, fallback to XDG default)
+DB_PATH: Final[str] = os.getenv("DB_PATH", str(Path.home() / ".local" / "share" / "kharkiv-metro-rp" / "metro.db"))
 
 
 # Command texts

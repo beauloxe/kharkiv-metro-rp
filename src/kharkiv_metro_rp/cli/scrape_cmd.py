@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import json
-import os
 
 import click
 from click.exceptions import Exit
 
-from ..config import Config
+from ..bot.constants import DB_PATH
 from ..data.database import MetroDatabase
-from ..data.initializer import init_stations
-from .utils import _check_db_exists, _get_db, console
+from ..data.initializer import init_database, init_stations
+from .utils import _check_db_exists, console
 
 
 @click.command()
@@ -33,31 +32,15 @@ def scrape(ctx: click.Context, init_db: bool, output: str) -> None:
     from ..data.scraper import MetroScraper
 
     try:
-        config: Config = ctx.obj["config"]
-        cli_override: str | None = ctx.obj.get("db_path")
-
-        # Check environment variable if no CLI override
-        if not cli_override:
-            cli_override = os.getenv("DB_PATH")
-
-        if cli_override:
-            # Custom path
-            if init_db:
-                from ..data.initializer import init_database
-
-                db = init_database(cli_override)
-            else:
-                if not _check_db_exists(cli_override):
-                    console.print(f"[red]✗[/red] Database not found at: {cli_override}")
-                    console.print("[yellow]Run:[/yellow] metro scrape --init-db --db-path " + cli_override)
-                    raise Exit(1)
-                db = MetroDatabase(cli_override)
+        # Use centralized DB_PATH constant
+        if init_db:
+            db = init_database(DB_PATH)
         else:
-            # XDG path
-            if init_db:
-                config.ensure_dirs()
-                config.create_default()
-            db = _get_db(ctx)
+            if not _check_db_exists(DB_PATH):
+                console.print(f"[red]✗[/red] Database not found at: {DB_PATH}")
+                console.print("[yellow]Run:[/yellow] metro scrape --init-db")
+                raise Exit(1)
+            db = MetroDatabase(DB_PATH)
 
         if output == "table":
             console.print("[cyan]Scraping schedules from metro.kharkiv.ua...[/cyan]")

@@ -11,6 +11,7 @@ from click.exceptions import Exit
 from rich.console import Console
 from rich.table import Table
 
+from ..bot.constants import DB_PATH
 from ..config import Config
 from ..core.models import Line
 from ..data.database import MetroDatabase
@@ -116,46 +117,30 @@ def _check_db_exists(db_path: str) -> bool:
 
 
 def _auto_init_xdg(config: Config) -> MetroDatabase:
-    """Auto-initialize XDG directories and database."""
-    config.ensure_dirs()
-    config.create_default()
-
-    db_path = config.get_db_path()
-
-    if not _check_db_exists(db_path):
+    """Auto-initialize database using centralized DB_PATH."""
+    # Use centralized DB_PATH constant
+    if not _check_db_exists(DB_PATH):
         console.print("[cyan]ℹ First run detected[/cyan]")
-        console.print(f"[dim]Config:[/dim] {config.config_path}")
-        console.print(f"[dim]Database:[/dim] {db_path}\n")
+        console.print(f"[dim]Database:[/dim] {DB_PATH}\n")
 
-        db = init_database(db_path)
+        db = init_database(DB_PATH)
 
-        console.print(f"[green]✓[/green] Initialized {db_path}")
+        console.print(f"[green]✓[/green] Initialized {DB_PATH}")
         console.print("[yellow]ℹ[/yellow] Run 'metro scrape' to populate schedules\n")
     else:
-        db = MetroDatabase(db_path)
+        db = MetroDatabase(DB_PATH)
 
     return db
 
 
 def _get_db(ctx: click.Context) -> MetroDatabase:
     """Get database instance, auto-initialize if needed."""
-    config: Config = ctx.obj["config"]
-    cli_override: str | None = ctx.obj.get("db_path")
-
-    # Check environment variable if no CLI override
-    if not cli_override:
-        cli_override = os.getenv("DB_PATH")
-
-    if cli_override:
-        # CLI override or env var - use specified path
-        if not _check_db_exists(cli_override):
-            console.print(f"[red]✗[/red] Database not found at: {cli_override}")
-            console.print("[yellow]Run:[/yellow] metro init --db-path " + cli_override)
-            raise Exit(1)
-        return MetroDatabase(cli_override)
-
-    # Use XDG paths with auto-initialization
-    return _auto_init_xdg(config)
+    # Use centralized DB_PATH constant
+    if not _check_db_exists(DB_PATH):
+        console.print(f"[red]✗[/red] Database not found at: {DB_PATH}")
+        console.print("[yellow]Run:[/yellow] metro init")
+        raise Exit(1)
+    return MetroDatabase(DB_PATH)
 
 
 def _display_route_table(route: Route, lang: str, console: Console, compact: bool = False) -> None:

@@ -10,6 +10,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
+from ..bot.constants import TIMEZONE
 from ..core.models import DayType, Route
 from ..core.router import MetroRouter
 from ..data.database import MetroDatabase
@@ -161,11 +162,9 @@ class MetroMCPServer:
         time_str = arguments.get("departure_time")
         if time_str:
             hour, minute = map(int, time_str.split(":"))
-            departure_time = datetime.now().replace(
-                hour=hour, minute=minute, second=0, microsecond=0
-            )
+            departure_time = datetime.now(TIMEZONE).replace(hour=hour, minute=minute, second=0, microsecond=0)
         else:
-            departure_time = datetime.now()
+            departure_time = datetime.now(TIMEZONE)
 
         # Parse day type
         day_type_str = arguments.get("day_type")
@@ -217,13 +216,9 @@ class MetroMCPServer:
         if route.departure_time and route.arrival_time:
             dep = route.departure_time.strftime("%H:%M")
             arr = route.arrival_time.strftime("%H:%M")
-            lines.append(
-                f"Route: {dep} → {arr} ({route.total_duration_minutes} min, {route.num_transfers} transfers)"
-            )
+            lines.append(f"Route: {dep} → {arr} ({route.total_duration_minutes} min, {route.num_transfers} transfers)")
         else:
-            lines.append(
-                f"Route: {route.total_duration_minutes} min, {route.num_transfers} transfers"
-            )
+            lines.append(f"Route: {route.total_duration_minutes} min, {route.num_transfers} transfers")
 
         lines.append("")
 
@@ -232,9 +227,7 @@ class MetroMCPServer:
             to_name = getattr(segment.to_station, name_attr)
 
             if segment.is_transfer:
-                lines.append(
-                    f"{i}. Transfer: {from_name} → {to_name} ({segment.duration_minutes} min)"
-                )
+                lines.append(f"{i}. Transfer: {from_name} → {to_name} ({segment.duration_minutes} min)")
             else:
                 line_name = getattr(segment.from_station.line, f"display_name_{lang}")
                 if segment.departure_time and segment.arrival_time:
@@ -242,9 +235,7 @@ class MetroMCPServer:
                     arr = segment.arrival_time.strftime("%H:%M")
                     lines.append(f"{i}. {line_name}: {from_name} → {to_name} ({dep} → {arr})")
                 else:
-                    lines.append(
-                        f"{i}. {line_name}: {from_name} → {to_name} ({segment.duration_minutes} min)"
-                    )
+                    lines.append(f"{i}. {line_name}: {from_name} → {to_name} ({segment.duration_minutes} min)")
 
         return "\n".join(lines)
 
@@ -318,7 +309,7 @@ class MetroMCPServer:
         if day_type_str:
             day_type = DayType.WEEKDAY if day_type_str == "weekday" else DayType.WEEKEND
         else:
-            day_type = DayType.WEEKDAY if datetime.now().weekday() < 5 else DayType.WEEKEND
+            day_type = DayType.WEEKDAY if datetime.now(TIMEZONE).weekday() < 5 else DayType.WEEKEND
 
         # Get direction if specified
         direction_id = None
@@ -344,7 +335,7 @@ class MetroMCPServer:
                 lines.append(f"Direction: {dir_name}")
 
                 # Show next few departures
-                now = datetime.now().time()
+                now = datetime.now(TIMEZONE).time()
                 next_deps = schedule.get_next_departures(now, 5)
                 if next_deps:
                     lines.append("Next departures:")
@@ -370,11 +361,7 @@ class MetroMCPServer:
         for station in stations_data:
             from ..core.models import Line
 
-            line_name = (
-                Line(station["line"]).display_name_ua
-                if lang == "ua"
-                else Line(station["line"]).display_name_en
-            )
+            line_name = Line(station["line"]).display_name_ua if lang == "ua" else Line(station["line"]).display_name_en
             lines.append(f"{line_name}: {station[name_attr]}")
 
         return [TextContent(type="text", text="\n".join(lines))]

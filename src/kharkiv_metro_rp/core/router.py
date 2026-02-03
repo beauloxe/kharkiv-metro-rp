@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from ..bot.constants import DB_PATH
+from ..bot.constants import DB_PATH, TIMEZONE
 from ..data.database import MetroDatabase
 from .graph import MetroGraph
 from .models import (
@@ -278,7 +278,7 @@ class MetroRouter:
     ) -> list[StationSchedule]:
         """Get schedule for a station."""
         if day_type is None:
-            day_type = self._get_day_type(datetime.now())
+            day_type = self._get_day_type(datetime.now(TIMEZONE))
 
         if direction_id:
             schedule = self.db.get_station_schedule(station_id, direction_id, day_type)

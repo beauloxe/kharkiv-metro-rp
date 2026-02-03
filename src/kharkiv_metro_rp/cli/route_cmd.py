@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import click
 from click.exceptions import Exit
 
+from ..bot.constants import TIMEZONE
 from ..config import Config
 from ..core.models import DayType
 from ..core.router import MetroRouter
@@ -106,18 +108,18 @@ def route(
             click.echo(f"Station not found: {to_station}", err=True)
             raise Exit(1)
 
-        # Parse departure time
+        # Parse departure time (with configured timezone)
         if time:
             hour, minute = map(int, time.split(":"))
         else:
-            now = datetime.now()
+            now = datetime.now(TIMEZONE)
             hour, minute = now.hour, now.minute
 
         if date:
             year, month, day = map(int, date.split("-"))
-            departure_time = datetime(year, month, day, hour, minute)
+            departure_time = datetime(year, month, day, hour, minute, tzinfo=TIMEZONE)
         else:
-            departure_time = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
+            departure_time = datetime.now(TIMEZONE).replace(hour=hour, minute=minute, second=0, microsecond=0)
 
         # Override day type if specified
         dt = (DayType.WEEKDAY if day_type == "weekday" else DayType.WEEKEND) if day_type else None

@@ -8,10 +8,11 @@ from datetime import datetime
 import click
 from click.exceptions import Exit
 
+from ..bot.constants import TIMEZONE
 from ..config import Config
 from ..core.models import DayType
 from ..core.router import MetroRouter
-from .utils import _, _get_db, console
+from .utils import _get_db, console
 
 
 @click.command()
@@ -73,11 +74,11 @@ def schedule(
             click.echo(f"Station not found: {station}", err=True)
             raise Exit(1)
 
-        # Determine day type
+        # Determine day type (with configured timezone)
         if day_type:
             dt = DayType.WEEKDAY if day_type == "weekday" else DayType.WEEKEND
         else:
-            dt = DayType.WEEKDAY if datetime.now().weekday() < 5 else DayType.WEEKEND
+            dt = DayType.WEEKDAY if datetime.now(TIMEZONE).weekday() < 5 else DayType.WEEKEND
 
         # Find direction if specified
         direction_id = None

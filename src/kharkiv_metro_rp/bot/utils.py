@@ -1,6 +1,7 @@
 """Utility functions for the Telegram bot."""
 
 import hashlib
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -19,7 +20,15 @@ def now() -> datetime:
 
 
 def get_db_path() -> str:
-    """Get database path using Config."""
+    """Get database path from environment or Config."""
+    # Environment variable takes priority (useful for Railway, Docker, etc.)
+    db_path = os.getenv("DB_PATH")
+    if db_path:
+        # Ensure parent directory exists
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        return db_path
+
+    # Fallback to Config default
     config = Config()
     config.ensure_dirs()
     return config.get_db_path()

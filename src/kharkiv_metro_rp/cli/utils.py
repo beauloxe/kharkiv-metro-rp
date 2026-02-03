@@ -142,8 +142,12 @@ def _get_db(ctx: click.Context) -> MetroDatabase:
     config: Config = ctx.obj["config"]
     cli_override: str | None = ctx.obj.get("db_path")
 
+    # Check environment variable if no CLI override
+    if not cli_override:
+        cli_override = os.getenv("DB_PATH")
+
     if cli_override:
-        # CLI override - use specified path
+        # CLI override or env var - use specified path
         if not _check_db_exists(cli_override):
             console.print(f"[red]✗[/red] Database not found at: {cli_override}")
             console.print("[yellow]Run:[/yellow] metro init --db-path " + cli_override)

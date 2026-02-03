@@ -10,7 +10,12 @@ from kharkiv_metro_rp.core.router import MetroRouter
 from kharkiv_metro_rp.data.database import MetroDatabase
 from kharkiv_metro_rp.data.initializer import init_database
 
-from .constants import LINE_COLOR_EMOJI, LINE_NAME_EMOJI, LINE_ORDER
+from .constants import LINE_COLOR_EMOJI, LINE_NAME_EMOJI, LINE_ORDER, TIMEZONE
+
+
+def now() -> datetime:
+    """Get current time in configured timezone."""
+    return datetime.now(TIMEZONE)
 
 
 def get_db_path() -> str:
@@ -158,8 +163,8 @@ def get_day_type_from_string(day_type: str) -> DayType:
 
 
 def get_current_day_type() -> DayType:
-    """Get DayType based on current day."""
-    return DayType.WEEKDAY if datetime.now().weekday() < 5 else DayType.WEEKEND
+    """Get DayType based on current day in configured timezone."""
+    return DayType.WEEKDAY if now().weekday() < 5 else DayType.WEEKEND
 
 
 def parse_line_selection(text: str) -> str | None:

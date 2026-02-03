@@ -34,6 +34,7 @@ from ..utils import (
     get_router,
     get_stations_by_line,
     get_stations_by_line_except,
+    now,
 )
 
 # Store pending reminders for callback reminder system
@@ -301,9 +302,13 @@ async def process_custom_time(message: types.Message, state: FSMContext):
         to_station_name = data.get("to_station")
         day_type_str = data.get("day_type", "weekday")
 
-        # Create datetime with custom time
-        now = datetime.now()
-        departure_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        # Create datetime with custom time in configured timezone
+        from zoneinfo import ZoneInfo
+
+        from ...constants import TIMEZONE
+
+        base_time = now()
+        departure_time = base_time.replace(hour=hour, minute=minute, second=0, microsecond=0, tzinfo=ZoneInfo(TIMEZONE))
 
         await _build_and_send_route(
             message,
@@ -339,9 +344,9 @@ async def process_current_time(message: types.Message, state: FSMContext):
     data = await state.get_data()
     from_station_name = data.get("from_station")
     to_station_name = data.get("to_station")
-    day_type_str = "weekday" if datetime.now().weekday() < 5 else "weekend"
+    day_type_str = "weekday" if now().weekday() < 5 else "weekend"
 
-    departure_time = datetime.now()
+    departure_time = now()
 
     await _build_and_send_route(
         message,
@@ -360,9 +365,9 @@ async def process_offset_time(message: types.Message, state: FSMContext, offset_
     data = await state.get_data()
     from_station_name = data.get("from_station")
     to_station_name = data.get("to_station")
-    day_type_str = "weekday" if datetime.now().weekday() < 5 else "weekend"
+    day_type_str = "weekday" if now().weekday() < 5 else "weekend"
 
-    departure_time = datetime.now() + timedelta(minutes=offset_minutes)
+    departure_time = now() + timedelta(minutes=offset_minutes)
 
     await _build_and_send_route(
         message,
@@ -498,7 +503,7 @@ async def process_reminder(callback: types.CallbackQuery):
     }
 
     # Calculate wait time until departure from station before last (when to remind)
-    now = datetime.now()
+    current_time = now()
     # Use departure time from the last segment's from_station (second-to-last station of the line)
     if len(segments) >= 1:
         remind_time = segments[-1].departure_time
@@ -506,7 +511,7 @@ async def process_reminder(callback: types.CallbackQuery):
         remind_time = None
 
     if remind_time:
-        wait_seconds = (remind_time - now).total_seconds()
+        wait_seconds = (remind_time - current_time).total_seconds()
         remind_time_str = remind_time.strftime("%H:%M")
     else:
         wait_seconds = 0

@@ -1,6 +1,8 @@
 """Constants for the Telegram bot."""
 
+import os
 from typing import Final
+from zoneinfo import ZoneInfo
 
 # Line mappings
 LINE_DISPLAY_TO_INTERNAL: Final[dict[str, str]] = {
@@ -60,6 +62,10 @@ class ButtonText:
     TIME_PLUS_10 = "▶ +10 хв"
     TIME_PLUS_20 = "⏩ +20 хв"
     CUSTOM_TIME = "⌚ Свій час"
+
+
+# Timezone setting (from TZ env var, fallback to Europe/Kyiv)
+TIMEZONE: Final[ZoneInfo] = ZoneInfo(os.getenv("TZ", "Europe/Kyiv"))
 
 
 # Command texts

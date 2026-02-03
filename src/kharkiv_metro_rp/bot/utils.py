@@ -24,6 +24,7 @@ def get_db_path() -> str:
     # Environment variable takes priority (useful for Railway, Docker, etc.)
     db_path = os.getenv("DB_PATH")
     if db_path:
+        print(f"[DB] Using DB_PATH from environment: {db_path}")
         # Ensure parent directory exists
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         return db_path
@@ -31,16 +32,23 @@ def get_db_path() -> str:
     # Fallback to Config default
     config = Config()
     config.ensure_dirs()
-    return config.get_db_path()
+    fallback_path = config.get_db_path()
+    print(f"[DB] Using default path: {fallback_path}")
+    return fallback_path
 
 
 def get_router() -> MetroRouter:
     """Get MetroRouter instance."""
     db_path = get_db_path()
+    print(f"[DB] Database path: {db_path}")
 
     # Auto-initialize database if it doesn't exist
     if not Path(db_path).exists():
+        print(f"[DB] Database not found, initializing...")
         init_database(db_path)
+        print(f"[DB] Database initialized at: {db_path}")
+    else:
+        print(f"[DB] Database exists at: {db_path}")
 
     db = MetroDatabase(db_path)
     return MetroRouter(db=db)

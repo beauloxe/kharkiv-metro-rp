@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ..core.models import DayType, create_stations
+from ..core.models import create_stations
 from .database import MetroDatabase
 
 
@@ -30,19 +30,18 @@ def init_stations(db: MetroDatabase) -> None:
 def init_schedules(db: MetroDatabase) -> None:
     """Initialize database with schedules by scraping."""
     try:
-        from .scraper import scrape_all_schedules
+        from .scraper import MetroScraper
 
-        print("Scraping weekday schedules...")
-        weekday_schedules = scrape_all_schedules(DayType.WEEKDAY)
-        for schedule in weekday_schedules:
-            db.save_schedule(schedule)
-        print(f"Saved {len(weekday_schedules)} weekday schedules")
+        scraper = MetroScraper()
 
-        print("Scraping weekend schedules...")
-        weekend_schedules = scrape_all_schedules(DayType.WEEKEND)
-        for schedule in weekend_schedules:
-            db.save_schedule(schedule)
-        print(f"Saved {len(weekend_schedules)} weekend schedules")
+        print("Scraping all schedules...")
+        all_schedules = scraper.scrape_all_schedules()
+        count = 0
+        for station_schedules in all_schedules.values():
+            for schedule in station_schedules:
+                db.save_schedule(schedule)
+                count += 1
+        print(f"Saved {count} schedules total")
 
     except Exception as e:
         print(f"Warning: Could not scrape schedules: {e}")

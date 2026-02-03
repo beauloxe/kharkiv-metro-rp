@@ -2,4 +2,4 @@
 startCommand = "uv run metro-bot"
 
 [env]
-DB_PATH = "/data/metro.db"
+DB_PATH = "/db/metro.db"

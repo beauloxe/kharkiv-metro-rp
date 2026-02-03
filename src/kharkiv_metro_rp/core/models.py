@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from dataclasses import dataclass, field
-from datetime import datetime, time
 from enum import Enum
 
 
@@ -49,7 +49,7 @@ class Line(Enum):
         return colors[self]
 
 
-@dataclass
+@dataclass(slots=True)
 class Station:
     """Metro station."""
 
@@ -69,7 +69,7 @@ class Station:
         return self.id == other.id
 
 
-@dataclass
+@dataclass(slots=True)
 class ScheduleEntry:
     """Single schedule entry (departure time)."""
 
@@ -77,10 +77,10 @@ class ScheduleEntry:
     minutes: int
 
     @property
-    def time(self) -> time:
-        return time(self.hour, self.minutes)
+    def time(self) -> dt.time:
+        return dt.datetime.strptime(f"{self.hour:02d}:{self.minutes:02d}", "%H:%M").time()
 
-    def to_datetime(self, base_date: datetime) -> datetime:
+    def to_datetime(self, base_date: dt.datetime) -> dt.datetime:
         # Preserve timezone from base_date
         return base_date.replace(hour=self.hour, minute=self.minutes, second=0, microsecond=0)
 
@@ -95,7 +95,7 @@ class ScheduleEntry:
         return self.minutes <= other.minutes
 
 
-@dataclass
+@dataclass(slots=True)
 class StationSchedule:
     """Schedule for a station in a specific direction."""
 
@@ -104,24 +104,24 @@ class StationSchedule:
     day_type: DayType
     entries: list[ScheduleEntry] = field(default_factory=list)
 
-    def get_next_departures(self, after_time: time, limit: int = 3) -> list[ScheduleEntry]:
+    def get_next_departures(self, after_time: dt.time, limit: int = 3) -> list[ScheduleEntry]:
         """Get next departures at or after given time."""
         future = [e for e in self.entries if e.time >= after_time]
         return sorted(future)[:limit]
 
-    def get_departures_between(self, start_time: time, end_time: time) -> list[ScheduleEntry]:
+    def get_departures_between(self, start_time: dt.time, end_time: dt.time) -> list[ScheduleEntry]:
         """Get departures between two times."""
         return [e for e in self.entries if start_time <= e.time <= end_time]
 
 
-@dataclass
+@dataclass(slots=True)
 class RouteSegment:
     """Single segment of a route."""
 
     from_station: Station
     to_station: Station
-    departure_time: datetime | None
-    arrival_time: datetime | None
+    departure_time: dt.datetime | None
+    arrival_time: dt.datetime | None
     is_transfer: bool = False
     duration_minutes: int = 0
 
@@ -132,15 +132,15 @@ class RouteSegment:
         return self.from_station.line
 
 
-@dataclass
+@dataclass(slots=True)
 class Route:
     """Complete route from start to end."""
 
     segments: list[RouteSegment] = field(default_factory=list)
     total_duration_minutes: int = 0
     num_transfers: int = 0
-    departure_time: datetime | None = None
-    arrival_time: datetime | None = None
+    departure_time: dt.datetime | None = None
+    arrival_time: dt.datetime | None = None
 
     @property
     def stations(self) -> list[Station]:
@@ -155,30 +155,31 @@ class Route:
     def to_dict(self, lang: str = "ua") -> dict:
         """Convert route to dictionary."""
         name_attr = f"name_{lang}"
+        line_attr = f"display_name_{lang}"
+
+        def station_dict(station: Station) -> dict:
+            return {
+                "id": station.id,
+                "name": getattr(station, name_attr),
+                "line": getattr(station.line, line_attr),
+            }
+
+        def segment_dict(seg: RouteSegment) -> dict:
+            return {
+                "from_station": station_dict(seg.from_station),
+                "to_station": station_dict(seg.to_station),
+                "departure_time": seg.departure_time.isoformat() if seg.departure_time else None,
+                "arrival_time": seg.arrival_time.isoformat() if seg.arrival_time else None,
+                "is_transfer": seg.is_transfer,
+                "duration_minutes": seg.duration_minutes,
+            }
+
         return {
             "total_duration_minutes": self.total_duration_minutes,
             "num_transfers": self.num_transfers,
             "departure_time": self.departure_time.isoformat() if self.departure_time else None,
             "arrival_time": self.arrival_time.isoformat() if self.arrival_time else None,
-            "segments": [
-                {
-                    "from_station": {
-                        "id": seg.from_station.id,
-                        "name": getattr(seg.from_station, name_attr),
-                        "line": getattr(seg.from_station.line, f"display_name_{lang}"),
-                    },
-                    "to_station": {
-                        "id": seg.to_station.id,
-                        "name": getattr(seg.to_station, name_attr),
-                        "line": getattr(seg.to_station.line, f"display_name_{lang}"),
-                    },
-                    "departure_time": seg.departure_time.isoformat() if seg.departure_time else None,
-                    "arrival_time": seg.arrival_time.isoformat() if seg.arrival_time else None,
-                    "is_transfer": seg.is_transfer,
-                    "duration_minutes": seg.duration_minutes,
-                }
-                for seg in self.segments
-            ],
+            "segments": [segment_dict(seg) for seg in self.segments],
         }
 
 
@@ -253,6 +254,15 @@ ALIAS_STATION_NAMES = {
     "хтз": "Тракторний завод",
     # TODO: add English old names
 }
+
+
+class MetroClosedError(Exception):
+    """Raised when trying to plan a route when metro is closed."""
+
+    def __init__(self, message: str | None = None) -> None:
+        if message is None:
+            message = "Метро закрите та/або на останній потяг неможливо встигнути"
+        super().__init__(message)
 
 
 def create_stations() -> dict[str, Station]:

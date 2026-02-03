@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from datetime import datetime, timedelta
 
-from ..bot.constants import DB_PATH, TIMEZONE
+from ..config import Config
 from ..data.database import MetroDatabase
-from .graph import MetroGraph
+from .graph import MetroGraph, get_metro_graph
 from .models import (
     DayType,
     Line,
+    MetroClosedError,
     Route,
     RouteSegment,
     Station,
@@ -25,20 +27,29 @@ class MetroRouter:
         db: MetroDatabase | None = None,
         graph: MetroGraph | None = None,
     ) -> None:
-        self.db = db or MetroDatabase(DB_PATH)
-        self.graph = graph or MetroGraph()
-        self.stations = self.graph.stations
+        config = Config()
+        self.db = db or MetroDatabase(config.get_db_path())
+        self.graph = graph or get_metro_graph()
+
+    @property
+    def stations(self) -> dict[str, Station]:
+        return self.graph.stations
 
     def find_route(
         self,
         from_station_id: str,
         to_station_id: str,
-        departure_time: datetime,
+        departure_time: dt.datetime,
         day_type: DayType | None = None,
     ) -> Route | None:
         """Find optimal route with schedule-based timing."""
         if day_type is None:
             day_type = self._get_day_type(departure_time)
+
+        # Check if metro is still open at departure time
+        is_open, last_departure, first_departure = self.db.is_metro_open(day_type, departure_time.time())
+        if not is_open:
+            raise MetroClosedError()
 
         # Find shortest path using graph
         path_result = self.graph.find_shortest_path(from_station_id, to_station_id)
@@ -48,7 +59,15 @@ class MetroRouter:
         path, _ = path_result
 
         # Build route with schedule-based timing
-        return self._build_route_with_schedule(path, departure_time, day_type)
+        route = self._build_route_with_schedule(path, departure_time, day_type)
+
+        # Check if route can be completed before metro closes
+        if route and route.arrival_time:
+            is_still_open, _, _ = self.db.is_metro_open(day_type, route.arrival_time.time())
+            if not is_still_open:
+                raise MetroClosedError()
+
+        return route
 
     def find_multiple_routes(
         self,
@@ -62,9 +81,12 @@ class MetroRouter:
         routes = []
 
         # Find primary route
-        primary = self.find_route(from_station_id, to_station_id, departure_time, day_type)
-        if primary:
-            routes.append(primary)
+        try:
+            primary = self.find_route(from_station_id, to_station_id, departure_time, day_type)
+            if primary:
+                routes.append(primary)
+        except MetroClosedError:
+            pass  # Metro is closed at departure time, try alternatives
 
         # Find alternative routes by trying different departure times
         current_time = departure_time
@@ -74,10 +96,13 @@ class MetroRouter:
 
             # Try 10 minutes later
             current_time = current_time + timedelta(minutes=10)
-            alt_route = self.find_route(from_station_id, to_station_id, current_time, day_type)
+            try:
+                alt_route = self.find_route(from_station_id, to_station_id, current_time, day_type)
 
-            if alt_route and not self._routes_similar(routes[-1], alt_route):
-                routes.append(alt_route)
+                if alt_route and not self._routes_similar(routes[-1], alt_route):
+                    routes.append(alt_route)
+            except MetroClosedError:
+                break  # Metro is closed, no point in trying later times
 
         return routes[:num_options]
 
@@ -88,6 +113,11 @@ class MetroRouter:
         day_type: DayType,
     ) -> Route:
         """Build route with schedule-based timing."""
+        # Check if metro is open at start time (or within early planning window)
+        is_open, last_departure, first_departure = self.db.is_metro_open(day_type, start_time.time())
+        if not is_open:
+            raise MetroClosedError()
+
         segments: list[RouteSegment] = []
         num_transfers = 0
 
@@ -131,11 +161,12 @@ class MetroRouter:
                     direction = self._find_terminal_in_path(path, i, current_line)
 
                     # Get exact departure time from schedule at the start of line
+                    current_time_only = dt.time(current_time.hour, current_time.minute)
                     next_departures = self.db.get_next_departures(
                         from_id,
                         direction,
                         day_type,
-                        current_time.time(),
+                        current_time_only,
                         limit=1,
                     )
 
@@ -145,6 +176,9 @@ class MetroRouter:
                         if departure_dt < current_time:
                             departure_dt += timedelta(days=1)
                         current_time = departure_dt
+                    else:
+                        # No departures available - metro is closed
+                        raise MetroClosedError()
 
                 # Calculate travel time based on arrival at next station
                 # Try to find when a train arrives at the next station heading same direction
@@ -201,11 +235,12 @@ class MetroRouter:
         Returns None if no schedule is available.
         """
         # Look up arrivals at the next station heading to the same terminal
+        after_time_only = dt.time(after_time.hour, after_time.minute)
         arrivals = self.db.get_next_departures(
             station_id,
             direction,
             day_type,
-            after_time.time(),
+            after_time_only,
             limit=1,
         )
 
@@ -279,7 +314,7 @@ class MetroRouter:
     ) -> list[StationSchedule]:
         """Get schedule for a station."""
         if day_type is None:
-            day_type = self._get_day_type(datetime.now(TIMEZONE))
+            day_type = self._get_day_type(datetime.now(Config.TIMEZONE))
 
         if direction_id:
             schedule = self.db.get_station_schedule(station_id, direction_id, day_type)

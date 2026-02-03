@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import heapq
 from dataclasses import dataclass, field
+from functools import lru_cache
+from operator import attrgetter
 
 from .models import ALIAS_STATION_NAMES, TRANSFERS, Line, Station, create_stations
 
@@ -53,7 +55,7 @@ class MetroGraph:
 
         # Sort by order and add edges
         for line, stations in lines_stations.items():
-            stations.sort(key=lambda s: s.order)
+            stations.sort(key=attrgetter("order"))
             for i in range(len(stations) - 1):
                 current = stations[i]
                 next_station = stations[i + 1]
@@ -129,19 +131,20 @@ class MetroGraph:
         name_lower = name.lower().strip()
         name_attr = f"name_{lang}"
 
-        # Check if it's an old name and resolve to new name
+        # Resolve alias to actual name
         if name_lower in ALIAS_STATION_NAMES:
             resolved_name = ALIAS_STATION_NAMES[name_lower]
             name_lower = resolved_name.lower()
 
+        stations = list(self.stations.values())
+
         # Exact match
-        for station in self.stations.values():
-            station_name = getattr(station, name_attr).lower()
-            if name_lower == station_name:
+        for station in stations:
+            if getattr(station, name_attr).lower() == name_lower:
                 return station
 
-        # Try partial match
-        for station in self.stations.values():
+        # Partial match
+        for station in stations:
             station_name = getattr(station, name_attr).lower()
             if name_lower in station_name or station_name in name_lower:
                 return station
@@ -159,3 +162,9 @@ class MetroGraph:
             if neighbor:
                 result.append((neighbor, edge.weight, edge.is_transfer))
         return result
+
+
+@lru_cache(maxsize=1)
+def get_metro_graph() -> MetroGraph:
+    """Get the singleton MetroGraph instance."""
+    return MetroGraph()

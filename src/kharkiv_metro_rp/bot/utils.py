@@ -1,140 +1,109 @@
 """Utility functions for the Telegram bot."""
 
+from __future__ import annotations
+
 import hashlib
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from kharkiv_metro_rp.config import Config
-from kharkiv_metro_rp.core.models import DayType, Route
-from kharkiv_metro_rp.core.router import MetroRouter
-from kharkiv_metro_rp.data.database import MetroDatabase
-from kharkiv_metro_rp.data.initializer import init_database, init_schedules
+from ..config import Config
+from ..core.models import DayType, Route
+from ..core.router import MetroRouter
+from ..data.database import MetroDatabase
+from ..data.initializer import init_database, init_schedules
 
-from .constants import DB_PATH, LINE_COLOR_EMOJI, LINE_NAME_EMOJI, LINE_ORDER, TIMEZONE
+if TYPE_CHECKING:
+    from .constants import LINE_COLOR_EMOJI, LINE_NAME_EMOJI
 
 
 def now() -> datetime:
     """Get current time in configured timezone."""
-    return datetime.now(TIMEZONE)
+    return datetime.now(Config.TIMEZONE)
 
 
 def get_db_path() -> str:
-    """Get database path from constants."""
-    # Use centralized DB_PATH constant
-    print(f"[DB] Using database path: {DB_PATH}")
-    # Ensure parent directory exists
-    Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
-    return DB_PATH
+    """Get database path."""
+    config = Config()
+    db_path = config.get_db_path()
+    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    return db_path
 
 
 def get_router() -> MetroRouter:
     """Get MetroRouter instance."""
     db_path = get_db_path()
-    print(f"[DB] Database path: {db_path}")
 
-    # Auto-initialize database if it doesn't exist
     if not Path(db_path).exists():
-        print(f"[DB] Database not found, initializing...")
         db = init_database(db_path)
-        print(f"[DB] Database initialized at: {db_path}")
-        # Also initialize schedules by scraping
-        print(f"[DB] Scraping schedules...")
         try:
             init_schedules(db)
-            print(f"[DB] Schedules initialized")
-        except Exception as e:
-            print(f"[DB] Warning: Could not initialize schedules: {e}")
+        except Exception:
+            pass  # Schedules can be added later
     else:
-        print(f"[DB] Database exists at: {db_path}")
-        # Check if schedules exist
         db = MetroDatabase(db_path)
-        if not db.has_schedules():
-            print(f"[DB] No schedules found, scraping...")
-            try:
-                init_schedules(db)
-                print(f"[DB] Schedules initialized")
-            except Exception as e:
-                print(f"[DB] Warning: Could not initialize schedules: {e}")
 
-    db = MetroDatabase(db_path)
     return MetroRouter(db=db)
 
 
 def get_stations_by_line(router: MetroRouter, line_name: str) -> list[str]:
-    """Get list of station names for a given line."""
-    stations = []
-    for st in router.stations.values():
-        if st.line.display_name_ua == line_name:
-            stations.append(st.name_ua)
-    return stations
+    """Get station names for a given line."""
+    return [st.name_ua for st in router.stations.values() if st.line.display_name_ua == line_name]
 
 
 def get_stations_by_line_except(router: MetroRouter, line_name: str, exclude_station: str) -> list[str]:
-    """Get list of station names for a given line, excluding one station."""
-    stations = []
-    for st in router.stations.values():
-        if st.line.display_name_ua == line_name and st.name_ua != exclude_station:
-            stations.append(st.name_ua)
-    return stations
+    """Get station names for a line, excluding one station."""
+    return [
+        st.name_ua
+        for st in router.stations.values()
+        if st.line.display_name_ua == line_name and st.name_ua != exclude_station
+    ]
 
 
 def format_route(route: Route) -> str:
-    """Format route compactly for Telegram with times on segments."""
-    lines = []
-    # Header: From → To
-    lines.append(f"🚇 {route.segments[0].from_station.name_ua} → {route.segments[-1].to_station.name_ua}")
-    # if route.num_transfers > 0:
-    #     lines.append(f"🔄 Пересадок: {route.num_transfers}")
-    lines.append(f"⏱ {route.total_duration_minutes} хв")
-    lines.append("")
-    lines.append("📍 Маршрут:")
+    """Format route for Telegram."""
+    from .constants import LINE_COLOR_EMOJI
+
+    lines = [
+        f"🚇 {route.segments[0].from_station.name_ua} → {route.segments[-1].to_station.name_ua}",
+        f"⏱ {route.total_duration_minutes} хв",
+        "",
+        "📍 Маршрут:",
+    ]
 
     i = 0
     while i < len(route.segments):
-        segment = route.segments[i]
+        seg = route.segments[i]
 
-        if segment.is_transfer:
-            # Transfer - show as "next" info
+        if seg.is_transfer:
             lines.append("")
-            lines.append(
-                f"🔄 {segment.from_station.name_ua} → {segment.to_station.name_ua} ({segment.duration_minutes} хв)"
-            )
+            lines.append(f"🔄 {seg.from_station.name_ua} → {seg.to_station.name_ua} ({seg.duration_minutes} хв)")
             lines.append("")
             i += 1
         else:
-            # Travel segment - find all consecutive segments on same line
-            line = segment.from_station.line
-            color_emoji = LINE_COLOR_EMOJI.get(line.color, "⚪")
-
-            # Start of this line section
-            start_station = segment.from_station
-            start_time = segment.departure_time
-
-            # Find end of this line section
-            end_station = segment.to_station
-            end_time = segment.arrival_time
-            total_duration = segment.duration_minutes
+            # Group consecutive segments on same line
+            start_station = seg.from_station
+            start_time = seg.departure_time
+            end_station = seg.to_station
+            end_time = seg.arrival_time
+            total_duration = seg.duration_minutes
+            line = seg.from_station.line
 
             i += 1
             while i < len(route.segments) and not route.segments[i].is_transfer:
-                # Continue on same line
                 end_station = route.segments[i].to_station
                 end_time = route.segments[i].arrival_time
                 total_duration += route.segments[i].duration_minutes
                 i += 1
 
-            # Format with times
-            from_name = start_station.name_ua
-            to_name = end_station.name_ua
+            color_emoji = LINE_COLOR_EMOJI.get(line.color, "⚪")
+            time_str = (
+                f"{start_time.strftime('%H:%M')} → {end_time.strftime('%H:%M')}"
+                if start_time and end_time
+                else f"{total_duration} хв"
+            )
 
-            if start_time and end_time:
-                dep = start_time.strftime("%H:%M")
-                arr = end_time.strftime("%H:%M")
-                time_str = f"{dep} → {arr}"
-            else:
-                time_str = f"{total_duration} хв"
-
-            lines.append(f"{color_emoji} {from_name} → {to_name}")
+            lines.append(f"{color_emoji} {start_station.name_ua} → {end_station.name_ua}")
             lines.append(f"• {time_str} ({total_duration} хв)")
 
     return "\n".join(lines)
@@ -142,89 +111,59 @@ def format_route(route: Route) -> str:
 
 def format_schedule(station_name: str, schedules: list, router: MetroRouter) -> str:
     """Format schedule for Telegram."""
-    lines = []
-    lines.append(f"🚇 {station_name}")
-    lines.append(f"📅 {'Будні' if schedules[0].day_type.value == 'weekday' else 'Вихідні'}")
-    lines.append("")
+    lines = [f"🚇 {station_name}", f"📅 {'Будні' if schedules[0].day_type.value == 'weekday' else 'Вихідні'}", ""]
 
-    for sch in schedules[:2]:  # Show up to 2 directions
+    for sch in schedules[:2]:  # Up to 2 directions
         dir_station = router.stations.get(sch.direction_station_id)
-        if dir_station:
-            dir_name = dir_station.name_ua
-            lines.append(f"➡️ Напрямок: {dir_name}")
+        if not dir_station:
+            continue
 
-            # Group by hour
-            by_hour: dict[int, list[int]] = {}
-            for entry in sch.entries:
-                if entry.hour not in by_hour:
-                    by_hour[entry.hour] = []
-                by_hour[entry.hour].append(entry.minutes)
+        lines.append(f"➡️ Напрямок: {dir_station.name_ua}")
 
-            for hour in sorted(by_hour.keys()):
-                minutes = ", ".join(f"{m:02d}" for m in sorted(by_hour[hour]))
-                lines.append(f"{hour:02d}: {minutes}")
+        # Group by hour
+        by_hour: dict[int, list[int]] = {}
+        for entry in sch.entries:
+            by_hour.setdefault(entry.hour, []).append(entry.minutes)
 
-            lines.append("")
+        for hour in sorted(by_hour.keys()):
+            minutes = ", ".join(f"{m:02d}" for m in sorted(by_hour[hour]))
+            lines.append(f"{hour:02d}: {minutes}")
+
+        lines.append("")
 
     return "\n".join(lines)
 
 
 def format_stations_list(line_name: str, stations: list[str]) -> str:
-    """Format stations list for display."""
+    """Format stations list."""
+    from .constants import LINE_NAME_EMOJI
+
     emoji = LINE_NAME_EMOJI.get(line_name, "⚪")
-    lines = [f"{emoji} {line_name}:\n"]
-
-    for st_name in stations:
-        lines.append(f"• {st_name}")
-
-    return "\n".join(lines)
-
-
-def get_day_type_from_string(day_type: str) -> DayType:
-    """Convert string day type to DayType enum."""
-    return DayType.WEEKDAY if day_type == "weekday" else DayType.WEEKEND
+    header = f"{emoji} {line_name}:\n"
+    body = "\n".join(f"• {name}" for name in stations)
+    return header + body
 
 
 def get_current_day_type() -> DayType:
-    """Get DayType based on current day in configured timezone."""
+    """Get current day type."""
     return DayType.WEEKDAY if now().weekday() < 5 else DayType.WEEKEND
 
 
-def parse_line_selection(text: str) -> str | None:
-    """Parse line selection from button text."""
-    from .constants import LINE_DISPLAY_TO_INTERNAL
-
-    return LINE_DISPLAY_TO_INTERNAL.get(text)
-
-
-def parse_day_type_selection(text: str) -> str | None:
-    """Parse day type selection from button text."""
-    from .constants import DAY_TYPE_DISPLAY_TO_INTERNAL
-
-    return DAY_TYPE_DISPLAY_TO_INTERNAL.get(text)
-
-
 def build_line_groups(route: Route) -> dict[str, list]:
-    """Group route segments by line for reminder buttons."""
-    # Get travel segments (excluding transfers)
-    travel_segments = [s for s in route.segments if not s.is_transfer]
-
-    # Group segments by line
-    line_groups: dict[str, list] = {}
-    for seg in travel_segments:
+    """Group route segments by line."""
+    groups: dict[str, list] = {}
+    for seg in route.segments:
+        if seg.is_transfer:
+            continue
         line_id = seg.from_station.line.color if seg.from_station.line else "unknown"
-        if line_id not in line_groups:
-            line_groups[line_id] = []
-        line_groups[line_id].append(seg)
-
-    return line_groups
+        groups.setdefault(line_id, []).append(seg)
+    return groups
 
 
 def generate_route_key(route: Route) -> str:
-    """Generate unique key for route storage (short hash for callback_data limit)."""
+    """Generate unique key for route."""
     from_st = route.segments[0].from_station
     to_st = route.segments[-1].to_station
     departure_ts = int(route.segments[0].departure_time.timestamp())
-    # Use short hash to stay within Telegram's 64-byte callback_data limit
     full_key = f"{from_st.id}:{to_st.id}:{departure_ts}"
     return hashlib.md5(full_key.encode()).hexdigest()[:12]

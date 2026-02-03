@@ -1,9 +1,14 @@
 """Constants for the Telegram bot."""
 
-import os
-from pathlib import Path
 from typing import Final
-from zoneinfo import ZoneInfo
+
+from ..config import Config
+
+# Get config values
+_config = Config()
+TIMEZONE = Config.TIMEZONE
+LINE_ORDER = Config.LINE_ORDER
+DB_PATH = _config.get_db_path()
 
 # Line mappings
 LINE_DISPLAY_TO_INTERNAL: Final[dict[str, str]] = {
@@ -17,9 +22,6 @@ LINE_INTERNAL_TO_DISPLAY: Final[dict[str, str]] = {
     "Салтівська": "🔵 Салтівська",
     "Олексіївська": "🟢 Олексіївська",
 }
-
-# Line order for consistent display
-LINE_ORDER: Final[list[str]] = ["Холодногірсько-заводська", "Салтівська", "Олексіївська"]
 
 # Emoji mappings
 LINE_COLOR_EMOJI: Final[dict[str, str]] = {
@@ -63,13 +65,6 @@ class ButtonText:
     TIME_PLUS_10 = "▶ +10 хв"
     TIME_PLUS_20 = "⏩ +20 хв"
     CUSTOM_TIME = "⌚ Свій час"
-
-
-# Timezone setting (from TZ env var, fallback to Europe/Kyiv)
-TIMEZONE: Final[ZoneInfo] = ZoneInfo(os.getenv("TZ", "Europe/Kyiv"))
-
-# Database path (from DB_PATH env var, fallback to XDG default)
-DB_PATH: Final[str] = os.getenv("DB_PATH", str(Path.home() / ".local" / "share" / "kharkiv-metro-rp" / "metro.db"))
 
 
 # Command texts

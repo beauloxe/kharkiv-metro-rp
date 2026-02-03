@@ -24,17 +24,17 @@ from kharkiv_metro_rp.bot.handlers.common import set_bot_commands
 env_path = Path(__file__).parent.parent.parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
-TOKEN = os.getenv("BOT_TOKEN")
-if not TOKEN:
-    raise ValueError("BOT_TOKEN not found in .env file")
 
-# Initialize bot and dispatcher
-bot = Bot(token=TOKEN)
-dp = Dispatcher(storage=MemoryStorage())
+def get_token() -> str:
+    """Get bot token from environment."""
+    token = os.getenv("BOT_TOKEN")
+    if not token:
+        raise ValueError("BOT_TOKEN not found in .env file")
+    return token
 
 
-def register_handlers():
-    """Register all handlers."""
+def register_handlers(dp: Dispatcher) -> None:
+    """Register all handlers in correct order."""
     # Register specific handlers first (they have state filters)
     register_route_handlers(dp)
     register_schedule_handlers(dp)
@@ -43,17 +43,32 @@ def register_handlers():
     register_common_handlers(dp)
 
 
-def main():
+async def main() -> None:
     """Run the bot."""
     print("Starting bot...")
 
-    async def on_startup():
-        register_handlers()
-        await set_bot_commands(bot)
-        await dp.start_polling(bot)
+    bot = Bot(token=get_token())
+    dp = Dispatcher(storage=MemoryStorage())
 
-    asyncio.run(on_startup())
+    register_handlers(dp)
+    await set_bot_commands(bot)
+
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await bot.session.close()
+
+
+def main_sync() -> None:
+    """Synchronous entry point for the bot."""
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nBot stopped by user")
+    except Exception as e:
+        print(f"Fatal error: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    main()
+    main_sync()

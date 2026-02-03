@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import datetime as dt
 from datetime import datetime
 from typing import Any
 
@@ -10,7 +11,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
-from ..bot.constants import TIMEZONE
+from ..config import Config
 from ..core.models import DayType, Route
 from ..core.router import MetroRouter
 from ..data.database import MetroDatabase
@@ -162,9 +163,9 @@ class MetroMCPServer:
         time_str = arguments.get("departure_time")
         if time_str:
             hour, minute = map(int, time_str.split(":"))
-            departure_time = datetime.now(TIMEZONE).replace(hour=hour, minute=minute, second=0, microsecond=0)
+            departure_time = datetime.now(Config.TIMEZONE).replace(hour=hour, minute=minute, second=0, microsecond=0)
         else:
-            departure_time = datetime.now(TIMEZONE)
+            departure_time = datetime.now(Config.TIMEZONE)
 
         # Parse day type
         day_type_str = arguments.get("day_type")
@@ -309,7 +310,7 @@ class MetroMCPServer:
         if day_type_str:
             day_type = DayType.WEEKDAY if day_type_str == "weekday" else DayType.WEEKEND
         else:
-            day_type = DayType.WEEKDAY if datetime.now(TIMEZONE).weekday() < 5 else DayType.WEEKEND
+            day_type = DayType.WEEKDAY if datetime.now(Config.TIMEZONE).weekday() < 5 else DayType.WEEKEND
 
         # Get direction if specified
         direction_id = None
@@ -335,8 +336,9 @@ class MetroMCPServer:
                 lines.append(f"Direction: {dir_name}")
 
                 # Show next few departures
-                now = datetime.now(TIMEZONE).time()
-                next_deps = schedule.get_next_departures(now, 5)
+                now = dt.datetime.now(Config.TIMEZONE)
+                now_time = dt.time(now.hour, now.minute)
+                next_deps = schedule.get_next_departures(now_time, 5)
                 if next_deps:
                     lines.append("Next departures:")
                     for dep in next_deps:

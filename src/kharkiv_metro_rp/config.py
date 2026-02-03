@@ -6,12 +6,9 @@ import os
 import platform
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
-try:
-    import tomllib  # Python 3.11+
-except ImportError:
-    import toml as tomllib  # Fallback for older Python
-
+import tomllib  # Python 3.11+ only
 
 DEFAULT_CONFIG = """[database]
 auto = true
@@ -33,6 +30,9 @@ user_agent = "kharkiv-metro-rp/1.0"
 
 class Config:
     """Configuration manager using XDG directories."""
+
+    TIMEZONE: ZoneInfo = ZoneInfo(os.getenv("TZ", "Europe/Kyiv"))
+    LINE_ORDER: list[str] = ["Холодногірсько-заводська", "Салтівська", "Олексіївська"]
 
     def __init__(self) -> None:
         self.config_dir = self._get_config_dir()
@@ -66,27 +66,14 @@ class Config:
     def _load(self) -> None:
         """Load configuration from file or create default."""
         if self.config_file.exists():
-            if hasattr(tomllib, "load"):
-                # Python 3.11+ tomllib - reads bytes
-                with open(self.config_file, "rb") as f:
-                    self._config = tomllib.load(f)
-            else:
-                # Older toml library - reads text
-                import toml
-
-                with open(self.config_file, encoding="utf-8") as f:
-                    self._config = toml.load(f)
+            with open(self.config_file, "rb") as f:
+                self._config = tomllib.load(f)
         else:
-            self._config = self._parse_default()
+            self._config = tomllib.loads(DEFAULT_CONFIG)
 
     def _parse_default(self) -> dict[str, Any]:
         """Parse default configuration."""
-        if hasattr(tomllib, "loads"):
-            return tomllib.loads(DEFAULT_CONFIG)
-        else:
-            import toml
-
-            return toml.loads(DEFAULT_CONFIG)
+        return tomllib.loads(DEFAULT_CONFIG)
 
     def ensure_dirs(self) -> None:
         """Ensure configuration and data directories exist."""

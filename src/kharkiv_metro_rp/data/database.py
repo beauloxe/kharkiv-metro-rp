@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import sqlite3
 from contextlib import contextmanager
-from datetime import time
 from pathlib import Path
 
 from ..core.models import DayType, ScheduleEntry, StationSchedule
@@ -173,7 +173,7 @@ class MetroDatabase:
         station_id: str,
         direction_station_id: str,
         day_type: DayType,
-        after_time: time,
+        after_time: dt.time,
         limit: int = 3,
     ) -> list[ScheduleEntry]:
         """Get next departures after given time."""
@@ -261,6 +261,79 @@ class MetroDatabase:
             """)
 
             return [dict(row) for row in cursor.fetchall()]
+
+    def get_last_departure_time(self, day_type: DayType) -> dt.time | None:
+        """Get the last departure time across all stations for a given day type."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                SELECT MAX(hour) as max_hour, MAX(minutes) as max_minutes
+                FROM schedules
+                WHERE day_type = ?
+                AND hour = (SELECT MAX(hour) FROM schedules WHERE day_type = ?)
+            """,
+                (day_type.value, day_type.value),
+            )
+
+            row = cursor.fetchone()
+            if row and row["max_hour"] is not None:
+                return dt.time(row["max_hour"], row["max_minutes"])
+            return None
+
+    def get_first_departure_time(self, day_type: DayType) -> dt.time | None:
+        """Get the first departure time across all stations for a given day type."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                SELECT MIN(hour) as min_hour, MIN(minutes) as min_minutes
+                FROM schedules
+                WHERE day_type = ?
+                AND hour = (SELECT MIN(hour) FROM schedules WHERE day_type = ?)
+            """,
+                (day_type.value, day_type.value),
+            )
+
+            row = cursor.fetchone()
+            if row and row["min_hour"] is not None:
+                return dt.time(row["min_hour"], row["min_minutes"])
+            return None
+
+    def is_metro_open(
+        self,
+        day_type: DayType,
+        check_time: dt.time,
+        early_planning_minutes: int = 90,
+    ) -> tuple[bool, dt.time | None, dt.time | None]:
+        """Check if metro is open at given time.
+
+        Metro is considered open for planning:
+        - During operating hours (first_departure to last_departure)
+        - Up to early_planning_minutes before first departure (allows early planning)
+
+        Returns:
+            Tuple of (is_open, last_departure_time, first_departure_time or None)
+        """
+        last_departure = self.get_last_departure_time(day_type)
+        first_departure = self.get_first_departure_time(day_type)
+
+        if last_departure is None or first_departure is None:
+            return True, None, None  # No schedules, assume always open
+
+        # Calculate earliest planning time
+        first_dt = dt.datetime.combine(dt.datetime.today(), first_departure)
+        earliest_planning_dt = first_dt - dt.timedelta(minutes=early_planning_minutes)
+        earliest_planning = dt.time(earliest_planning_dt.hour, earliest_planning_dt.minute)
+
+        # Check if current time is within operating hours or early planning window
+        if earliest_planning <= check_time <= last_departure:
+            return True, last_departure, first_departure
+
+        # Metro is closed (after last departure or too early before first departure)
+        return False, last_departure, first_departure
 
     def get_stations_by_line(self, line: str) -> list[dict]:
         """Get stations by line."""

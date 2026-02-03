@@ -7,7 +7,7 @@ import json
 import click
 from click.exceptions import Exit
 
-from ..bot.constants import DB_PATH
+from ..config import Config
 from ..data.initializer import init_database
 from .utils import console
 
@@ -24,14 +24,14 @@ from .utils import console
 def init(ctx: click.Context, output: str) -> None:
     """Initialize database with station data."""
     try:
-        # Use centralized DB_PATH constant
-        db = init_database(DB_PATH)
-        path_msg = DB_PATH
+        config: Config = ctx.obj["config"]
+        db_path = config.get_db_path()
+        db = init_database(db_path)
 
         if output == "json":
-            click.echo(json.dumps({"status": "ok", "path": path_msg}))
+            click.echo(json.dumps({"status": "ok", "path": db_path}))
         else:
-            console.print(f"[green]✓[/green] Database initialized at: {path_msg}")
+            console.print(f"[green]✓[/green] Database initialized at: {db_path}")
     except Exception as e:
         if output == "json":
             click.echo(json.dumps({"status": "error", "message": str(e)}))

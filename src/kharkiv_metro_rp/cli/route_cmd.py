@@ -3,61 +3,27 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
+from datetime import datetime
 
 import click
 from click.exceptions import Exit
 
-from ..bot.constants import TIMEZONE
 from ..config import Config
-from ..core.models import DayType
+from ..core.models import DayType, MetroClosedError
 from ..core.router import MetroRouter
-from .utils import _display_route_simple, _display_route_table, _get_db, console
+from ..data.database import MetroDatabase
+from .utils import console, display_route_simple, display_route_table
 
 
 @click.command()
 @click.argument("from_station")
 @click.argument("to_station")
-@click.option(
-    "--time",
-    "-t",
-    help="Departure time (HH:MM)",
-    default=None,
-)
-@click.option(
-    "--date",
-    "-d",
-    help="Departure date (YYYY-MM-DD)",
-    default=None,
-)
-@click.option(
-    "--day-type",
-    "-s",
-    type=click.Choice(["weekday", "weekend"]),
-    help="Day type (overrides date)",
-    default=None,
-)
-@click.option(
-    "--lang",
-    "-l",
-    type=click.Choice(["ua", "en"]),
-    default=None,
-    help="Language for station names",
-)
-@click.option(
-    "--format",
-    "-f",
-    type=click.Choice(["full", "simple", "json"]),
-    default=None,
-    help="Output format (full=detailed table, simple=inline, json=JSON)",
-)
-@click.option(
-    "--compact",
-    "-c",
-    is_flag=True,
-    help="Show only key stations (start, transfers, end)",
-)
+@click.option("--time", "-t", help="Departure time (HH:MM)")
+@click.option("--date", "-d", help="Departure date (YYYY-MM-DD)")
+@click.option("--day-type", "-s", type=click.Choice(["weekday", "weekend"]), help="Day type (overrides date)")
+@click.option("--lang", "-l", type=click.Choice(["ua", "en"]), help="Language for station names")
+@click.option("--format", "-f", type=click.Choice(["full", "simple", "json"]), help="Output format")
+@click.option("--compact", "-c", is_flag=True, help="Show only key stations (start, transfers, end)")
 @click.pass_context
 def route(
     ctx: click.Context,
@@ -71,30 +37,19 @@ def route(
     compact: bool,
 ) -> None:
     """Find route between two stations."""
-    # Initialize defaults
-    fmt = "full"
+    config: Config = ctx.obj["config"]
+    lang = lang or config.get("preferences.language", "ua")
+    fmt = format or config.get("preferences.route.format", "full")
+
+    # Handle compact flag logic
+    config_compact = config.get("preferences.route.compact", False)
+    show_compact = (not config_compact) if compact else config_compact
 
     try:
-        config: Config = ctx.obj["config"]
-
-        # Use config defaults if not specified
-        if lang is None:
-            lang = config.get("preferences.language", "ua")
-
-        # Check preferences.route.format first, fallback to "full"
-        fmt = config.get("preferences.route.format", "full") if format is None else format
-
-        # CLI flag inverts the config setting
-        # If config compact=true, --compact shows full version
-        # If config compact=false (default), --compact shows compact version
-        config_compact = config.get("preferences.route.compact", False)
-        compact = (not config_compact) if compact else config_compact
-
-        # Ensure lang is not None
-        lang = lang or "ua"
-        fmt = fmt or "full"
-
-        router = MetroRouter(db=_get_db(ctx))
+        # Get database
+        db_path = str(ctx.obj.get("db_path") or config.get_db_path())
+        db = MetroDatabase(db_path)
+        router = MetroRouter(db=db)
 
         # Find stations
         from_st = router.find_station_by_name(from_station, lang)
@@ -103,46 +58,45 @@ def route(
         if not from_st:
             click.echo(f"Station not found: {from_station}", err=True)
             raise Exit(1)
-
         if not to_st:
             click.echo(f"Station not found: {to_station}", err=True)
             raise Exit(1)
 
-        # Parse departure time (with configured timezone)
+        # Parse departure time
         if time:
             hour, minute = map(int, time.split(":"))
         else:
-            now = datetime.now(TIMEZONE)
+            now = datetime.now(Config.TIMEZONE)
             hour, minute = now.hour, now.minute
 
         if date:
             year, month, day = map(int, date.split("-"))
-            departure_time = datetime(year, month, day, hour, minute, tzinfo=TIMEZONE)
+            departure_time = datetime(year, month, day, hour, minute, tzinfo=Config.TIMEZONE)
         else:
-            departure_time = datetime.now(TIMEZONE).replace(hour=hour, minute=minute, second=0, microsecond=0)
+            departure_time = datetime.now(Config.TIMEZONE).replace(hour=hour, minute=minute, second=0, microsecond=0)
 
-        # Override day type if specified
-        dt = (DayType.WEEKDAY if day_type == "weekday" else DayType.WEEKEND) if day_type else None
+        # Determine day type
+        day_type_enum = None
+        if day_type:
+            day_type_enum = DayType.WEEKDAY if day_type == "weekday" else DayType.WEEKEND
 
         # Find route
-        route = router.find_route(from_st.id, to_st.id, departure_time, dt)
+        try:
+            route_result = router.find_route(from_st.id, to_st.id, departure_time, day_type_enum)
+        except MetroClosedError:
+            error_msg = "Метро закрите та/або на останній потяг неможливо встигнути"
+            if fmt == "json":
+                click.echo(json.dumps({"status": "error", "message": error_msg}))
+            else:
+                console.print(f"[red]Error:[/red] {error_msg}")
+            raise Exit(1)
 
-        if not route:
+        if not route_result:
             click.echo("No route found", err=True)
             raise Exit(1)
 
-        # Output
-        if fmt == "json":
-            result = {
-                "from": getattr(from_st, f"name_{lang}"),
-                "to": getattr(to_st, f"name_{lang}"),
-                "route": route.to_dict(lang),
-            }
-            click.echo(json.dumps(result, indent=2, ensure_ascii=False))
-        elif fmt == "simple":
-            _display_route_simple(route, lang, console, compact=compact)
-        else:
-            _display_route_table(route, lang, console, compact=compact)
+        # Output result
+        _output_route(route_result, from_st, to_st, lang, fmt, show_compact)
 
     except Exception as e:
         if fmt == "json":
@@ -150,3 +104,18 @@ def route(
         else:
             console.print(f"[red]Error:[/red] {e}")
         raise Exit(1)
+
+
+def _output_route(route, from_st, to_st, lang: str, fmt: str, compact: bool) -> None:
+    """Output route in the specified format."""
+    if fmt == "json":
+        result = {
+            "from": getattr(from_st, f"name_{lang}"),
+            "to": getattr(to_st, f"name_{lang}"),
+            "route": route.to_dict(lang),
+        }
+        click.echo(json.dumps(result, indent=2, ensure_ascii=False))
+    elif fmt == "simple":
+        display_route_simple(route, lang, compact=compact)
+    else:
+        display_route_table(route, lang, compact=compact)

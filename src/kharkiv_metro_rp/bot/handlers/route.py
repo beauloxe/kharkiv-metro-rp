@@ -8,7 +8,7 @@ from aiogram import Dispatcher, F, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
-from kharkiv_metro_rp.core.models import DayType
+from kharkiv_metro_rp.core.models import DayType, MetroClosedError
 
 from ..constants import (
     DAY_TYPE_DISPLAY_TO_INTERNAL,
@@ -30,7 +30,6 @@ from ..utils import (
     format_route,
     generate_route_key,
     get_current_day_type,
-    get_day_type_from_string,
     get_router,
     get_stations_by_line,
     get_stations_by_line_except,
@@ -405,8 +404,16 @@ async def _build_and_send_route(
             await state.clear()
             return
 
-        dt = get_day_type_from_string(day_type_str)
-        route = router.find_route(from_st.id, to_st.id, departure_time, dt)
+        dt = DayType.WEEKDAY if day_type_str == "weekday" else DayType.WEEKEND
+        try:
+            route = router.find_route(from_st.id, to_st.id, departure_time, dt)
+        except MetroClosedError:
+            await message.answer(
+                "❌ Метро закрите та/або на останній потяг неможливо встигнути\nСпробуйте інший час або день.",
+                reply_markup=get_main_keyboard(),
+            )
+            await state.clear()
+            return
 
         if not route:
             await message.answer("❌ Маршрут не знайдено\nСпробуйте інші станції.", reply_markup=get_main_keyboard())

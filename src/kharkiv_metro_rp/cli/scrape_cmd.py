@@ -7,10 +7,10 @@ import json
 import click
 from click.exceptions import Exit
 
-from ..bot.constants import DB_PATH
+from ..config import Config
 from ..data.database import MetroDatabase
 from ..data.initializer import init_database, init_stations
-from .utils import _check_db_exists, console
+from .utils import console, ensure_db
 
 
 @click.command()
@@ -32,15 +32,14 @@ def scrape(ctx: click.Context, init_db: bool, output: str) -> None:
     from ..data.scraper import MetroScraper
 
     try:
-        # Use centralized DB_PATH constant
+        config: Config = ctx.obj["config"]
+        db_path = config.get_db_path()
+
+        # Use config database path
         if init_db:
-            db = init_database(DB_PATH)
+            db = init_database(db_path)
         else:
-            if not _check_db_exists(DB_PATH):
-                console.print(f"[red]✗[/red] Database not found at: {DB_PATH}")
-                console.print("[yellow]Run:[/yellow] metro scrape --init-db")
-                raise Exit(1)
-            db = MetroDatabase(DB_PATH)
+            db = ensure_db(db_path)
 
         if output == "table":
             console.print("[cyan]Scraping schedules from metro.kharkiv.ua...[/cyan]")

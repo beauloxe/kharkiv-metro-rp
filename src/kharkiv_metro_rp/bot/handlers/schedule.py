@@ -22,7 +22,6 @@ from ..states import ScheduleStates
 from ..utils import (
     format_schedule,
     get_current_day_type,
-    get_day_type_from_string,
     get_router,
     get_stations_by_line,
 )
@@ -145,7 +144,7 @@ async def process_day_type(message: types.Message, state: FSMContext):
             await state.clear()
             return
 
-        dt = get_day_type_from_string(selected_day)
+        dt = DayType.WEEKDAY if selected_day == "weekday" else DayType.WEEKEND
         schedules = router.get_station_schedule(st.id, None, dt)
 
         if not schedules:

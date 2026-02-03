@@ -17,15 +17,6 @@ async def cmd_start(message: types.Message):
     )
 
 
-async def cmd_menu(message: types.Message, state: FSMContext):
-    """Handle /menu command - show main menu."""
-    await state.clear()
-    await message.answer(
-        "🚇 Головне меню\n\nОберіть дію:",
-        reply_markup=get_main_keyboard(),
-    )
-
-
 async def menu_route(message: types.Message, state: FSMContext):
     """Handle route button from menu."""
     from .route import cmd_route
@@ -35,9 +26,15 @@ async def menu_route(message: types.Message, state: FSMContext):
 
 async def menu_schedule(message: types.Message, state: FSMContext):
     """Handle schedule button from menu."""
-    from .schedule import cmd_schedule
+    from ..keyboards import get_lines_keyboard
+    from ..states import ScheduleStates
 
-    await cmd_schedule(message, state)
+    # Start interactive schedule flow directly
+    await state.set_state(ScheduleStates.waiting_for_line)
+    await message.answer(
+        "📅 Оберіть лінію метро:",
+        reply_markup=get_lines_keyboard(),
+    )
 
 
 async def menu_stations(message: types.Message, state: FSMContext):
@@ -70,11 +67,9 @@ async def set_bot_commands(bot: Bot):
     """Set bot commands menu."""
     commands = [
         BotCommand(command="start", description=CommandText.START),
-        BotCommand(command="menu", description=CommandText.MENU),
         BotCommand(command="route", description=CommandText.ROUTE),
         BotCommand(command="schedule", description=CommandText.SCHEDULE),
         BotCommand(command="stations", description=CommandText.STATIONS),
-        BotCommand(command="trigger", description=CommandText.TRIGGER),
     ]
     await bot.set_my_commands(commands)
 
@@ -83,7 +78,6 @@ def register_common_handlers(dp: Dispatcher):
     """Register common handlers."""
     # Command handlers - work in any state
     dp.message.register(cmd_start, Command("start"))
-    dp.message.register(cmd_menu, Command("menu"))
 
     # Menu button handlers - only work when NOT in any state (main menu)
     dp.message.register(menu_route, StateFilter(None), F.text == ButtonText.ROUTE)

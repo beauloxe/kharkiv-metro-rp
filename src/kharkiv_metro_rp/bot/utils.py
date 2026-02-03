@@ -1,5 +1,6 @@
 """Utility functions for the Telegram bot."""
 
+import hashlib
 from datetime import datetime
 from pathlib import Path
 
@@ -54,15 +55,11 @@ def format_route(route: Route) -> str:
     lines = []
     # Header: From → To
     lines.append(f"🚇 {route.segments[0].from_station.name_ua} → {route.segments[-1].to_station.name_ua}")
+    # if route.num_transfers > 0:
+    #     lines.append(f"🔄 Пересадок: {route.num_transfers}")
     lines.append(f"⏱ {route.total_duration_minutes} хв")
-
-    # Show transfer info if exists
-    if route.num_transfers > 0:
-        lines.append(f"🔄 Пересадок: {route.num_transfers}")
-        lines.append("")
-        lines.append("📍 Маршрут:")
-    else:
-        lines.append("")
+    lines.append("")
+    lines.append("📍 Маршрут:")
 
     i = 0
     while i < len(route.segments):
@@ -150,7 +147,7 @@ def format_stations_list(line_name: str, stations: list[str]) -> str:
     lines = [f"{emoji} {line_name}:\n"]
 
     for st_name in stations:
-        lines.append(f"  • {st_name}")
+        lines.append(f"• {st_name}")
 
     return "\n".join(lines)
 
@@ -196,8 +193,10 @@ def build_line_groups(route: Route) -> dict[str, list]:
 
 
 def generate_route_key(route: Route) -> str:
-    """Generate unique key for route storage."""
+    """Generate unique key for route storage (short hash for callback_data limit)."""
     from_st = route.segments[0].from_station
     to_st = route.segments[-1].to_station
     departure_ts = int(route.segments[0].departure_time.timestamp())
-    return f"{from_st.id}:{to_st.id}:{departure_ts}"
+    # Use short hash to stay within Telegram's 64-byte callback_data limit
+    full_key = f"{from_st.id}:{to_st.id}:{departure_ts}"
+    return hashlib.md5(full_key.encode()).hexdigest()[:12]

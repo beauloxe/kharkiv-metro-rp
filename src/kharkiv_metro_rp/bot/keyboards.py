@@ -54,7 +54,9 @@ def get_day_type_keyboard(include_cancel: bool = True) -> ReplyKeyboardMarkup:
 def get_time_choice_keyboard() -> ReplyKeyboardMarkup:
     """Create keyboard for time choice."""
     keyboard = [
+        [KeyboardButton(text=ButtonText.TIME_MINUS_20), KeyboardButton(text=ButtonText.TIME_MINUS_10)],
         [KeyboardButton(text=ButtonText.CURRENT_TIME)],
+        [KeyboardButton(text=ButtonText.TIME_PLUS_10), KeyboardButton(text=ButtonText.TIME_PLUS_20)],
         [KeyboardButton(text=ButtonText.CUSTOM_TIME)],
         [KeyboardButton(text=ButtonText.BACK), KeyboardButton(text=ButtonText.CANCEL)],
     ]
@@ -120,6 +122,9 @@ def build_reminder_keyboard(
     line_ids = list(line_groups.keys())
 
     for idx, (line_id, segments) in enumerate(line_groups.items()):
+        # Skip short trips (1 station) - no reminder needed
+        if len(segments) <= 1:
+            continue
         if clicked_idx is not None and idx == clicked_idx:
             # This is the clicked button - show as set
             time_display = remind_time or "✅"

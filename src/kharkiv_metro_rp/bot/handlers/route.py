@@ -36,7 +36,7 @@ from ..utils import (
     get_stations_by_line_except,
 )
 
-# Store reminders for trigger command
+# Store pending reminders for callback reminder system
 pending_reminders: dict[int, dict] = {}
 
 # Store active routes for reminder callback lookup (callback_data limited to 64 bytes)
@@ -201,6 +201,14 @@ async def process_time_choice(message: types.Message, state: FSMContext):
     if message.text == ButtonText.CURRENT_TIME:
         # Use current time and day type
         await process_current_time(message, state)
+    elif message.text == ButtonText.TIME_MINUS_20:
+        await process_offset_time(message, state, -20)
+    elif message.text == ButtonText.TIME_MINUS_10:
+        await process_offset_time(message, state, -10)
+    elif message.text == ButtonText.TIME_PLUS_10:
+        await process_offset_time(message, state, 10)
+    elif message.text == ButtonText.TIME_PLUS_20:
+        await process_offset_time(message, state, 20)
     elif message.text == ButtonText.CUSTOM_TIME:
         # Ask for day type first, then custom time
         await state.set_state(RouteStates.waiting_for_day_type)
@@ -345,6 +353,27 @@ async def process_current_time(message: types.Message, state: FSMContext):
     )
 
 
+async def process_offset_time(message: types.Message, state: FSMContext, offset_minutes: int):
+    """Process time with offset (+/- minutes) from current time."""
+    from datetime import timedelta
+
+    data = await state.get_data()
+    from_station_name = data.get("from_station")
+    to_station_name = data.get("to_station")
+    day_type_str = "weekday" if datetime.now().weekday() < 5 else "weekend"
+
+    departure_time = datetime.now() + timedelta(minutes=offset_minutes)
+
+    await _build_and_send_route(
+        message,
+        state,
+        from_station_name,
+        to_station_name,
+        departure_time,
+        day_type_str,
+    )
+
+
 async def _build_and_send_route(
     message: types.Message,
     state: FSMContext,
@@ -392,10 +421,14 @@ async def _build_and_send_route(
         route_key = generate_route_key(route)
         _active_routes[route_key] = (route, line_groups)
 
-        # Build reminder keyboard
-        reminder_kb = build_reminder_keyboard(route_key, line_groups)
+        # Build reminder keyboard only if there's at least one line with 2+ stations
+        has_long_line = any(len(segments) > 1 for segments in line_groups.values())
+        if has_long_line:
+            reminder_kb = build_reminder_keyboard(route_key, line_groups)
+        else:
+            reminder_kb = None
 
-        if reminder_kb.inline_keyboard:
+        if reminder_kb and reminder_kb.inline_keyboard:
             await message.answer(result, reply_markup=reminder_kb)
         else:
             await message.answer(result)
@@ -531,27 +564,6 @@ async def cancel_reminder(callback: types.CallbackQuery):
 # ===== Trigger Command =====
 
 
-async def cmd_trigger(message: types.Message):
-    """Trigger pending reminder immediately (for testing)."""
-    user_id = message.from_user.id
-
-    if user_id not in pending_reminders:
-        await message.answer("❌ Немає активних нагадувань")
-        return
-
-    reminder = pending_reminders[user_id]
-    del pending_reminders[user_id]
-
-    prev_st = reminder["prev_st"]
-    to_st = reminder["to_st"]
-
-    await message.answer(
-        f"🚇 Ви прибули на станцію {prev_st.name_ua}!\n"
-        f"⏰ Готуйтесь виходити - наступна станція: {to_st.name_ua}\n\n"
-        f"(Тестовий запуск через /trigger)"
-    )
-
-
 # ===== Registration =====
 
 
@@ -559,7 +571,6 @@ def register_route_handlers(dp: Dispatcher):
     """Register route handlers."""
     # Command handlers
     dp.message.register(cmd_route, Command("route"))
-    dp.message.register(cmd_trigger, Command("trigger"))
 
     # From line state handlers
     dp.message.register(back_from_line, RouteStates.waiting_for_from_line, F.text == ButtonText.BACK)

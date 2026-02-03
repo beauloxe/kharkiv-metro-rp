@@ -226,6 +226,14 @@ class MetroDatabase:
 
             return schedules
 
+    def has_schedules(self) -> bool:
+        """Check if schedules table has any data."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM schedules")
+            count = cursor.fetchone()[0]
+            return count > 0
+
     def get_station(self, station_id: str) -> dict | None:
         """Get station by ID."""
         with self._get_connection() as conn:

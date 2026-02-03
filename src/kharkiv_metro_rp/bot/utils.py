@@ -8,7 +8,7 @@ from kharkiv_metro_rp.config import Config
 from kharkiv_metro_rp.core.models import DayType, Route
 from kharkiv_metro_rp.core.router import MetroRouter
 from kharkiv_metro_rp.data.database import MetroDatabase
-from kharkiv_metro_rp.data.initializer import init_database
+from kharkiv_metro_rp.data.initializer import init_database, init_schedules
 
 from .constants import DB_PATH, LINE_COLOR_EMOJI, LINE_NAME_EMOJI, LINE_ORDER, TIMEZONE
 
@@ -35,10 +35,26 @@ def get_router() -> MetroRouter:
     # Auto-initialize database if it doesn't exist
     if not Path(db_path).exists():
         print(f"[DB] Database not found, initializing...")
-        init_database(db_path)
+        db = init_database(db_path)
         print(f"[DB] Database initialized at: {db_path}")
+        # Also initialize schedules by scraping
+        print(f"[DB] Scraping schedules...")
+        try:
+            init_schedules(db)
+            print(f"[DB] Schedules initialized")
+        except Exception as e:
+            print(f"[DB] Warning: Could not initialize schedules: {e}")
     else:
         print(f"[DB] Database exists at: {db_path}")
+        # Check if schedules exist
+        db = MetroDatabase(db_path)
+        if not db.has_schedules():
+            print(f"[DB] No schedules found, scraping...")
+            try:
+                init_schedules(db)
+                print(f"[DB] Schedules initialized")
+            except Exception as e:
+                print(f"[DB] Warning: Could not initialize schedules: {e}")
 
     db = MetroDatabase(db_path)
     return MetroRouter(db=db)

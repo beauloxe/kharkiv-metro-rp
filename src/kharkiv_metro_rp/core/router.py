@@ -211,7 +211,8 @@ class MetroRouter:
 
         if arrivals:
             arrival = arrivals[0]
-            arrival_dt = datetime.combine(after_time.date(), arrival.time)
+            # Preserve timezone from after_time
+            arrival_dt = after_time.replace(hour=arrival.time.hour, minute=arrival.time.minute, second=0, microsecond=0)
             if arrival_dt < after_time:
                 arrival_dt += timedelta(days=1)
             return arrival_dt

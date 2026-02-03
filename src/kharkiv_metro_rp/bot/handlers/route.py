@@ -303,12 +303,8 @@ async def process_custom_time(message: types.Message, state: FSMContext):
         day_type_str = data.get("day_type", "weekday")
 
         # Create datetime with custom time in configured timezone
-        from zoneinfo import ZoneInfo
-
-        from ...constants import TIMEZONE
-
         base_time = now()
-        departure_time = base_time.replace(hour=hour, minute=minute, second=0, microsecond=0, tzinfo=ZoneInfo(TIMEZONE))
+        departure_time = base_time.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
         await _build_and_send_route(
             message,

@@ -81,6 +81,7 @@ class ScheduleEntry:
         return time(self.hour, self.minutes)
 
     def to_datetime(self, base_date: datetime) -> datetime:
+        # Preserve timezone from base_date
         return base_date.replace(hour=self.hour, minute=self.minutes, second=0, microsecond=0)
 
     def __lt__(self, other: ScheduleEntry) -> bool:

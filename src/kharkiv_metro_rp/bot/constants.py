@@ -80,3 +80,4 @@ class CommandText:
     ROUTE = "Побудувати маршрут"
     SCHEDULE = "Розклад станції"
     STATIONS = "Список станцій"
+    ABOUT = "Про бота"

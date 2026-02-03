@@ -17,6 +17,23 @@ async def cmd_start(message: types.Message):
     )
 
 
+async def cmd_about(message: types.Message):
+    """Handle /about command."""
+    about_text = (
+        "🚇 Цей бот допомагає знаходити оптимальні маршрути та переглядати розклад Харківського метрополітену.\n\n"
+        "Основні функції:\n"
+        "• Гнучка побудова маршруту з пересадками та часом на поїздку\n"
+        "• Нагадування перед виходом за одну станцію\n"
+        "• Розклад станцій по буднях та вихідних\n"
+        "Джерело даних: https://www.metro.kharkiv.ua/hkrafiky-krukhu-poizdiv/\n\n"
+        "⚠️ Цей проєкт не пов'язаний з КП «Харківський метрополітен» і не надає жодних гарантій. "
+        "Користуючись цим проєктом, Ви несете відповідальність за планування маршруту."
+        "\n\nБільше інформації та код проєкту "
+        '<a href="https://github.com/beauloxe/kharkiv-metro-rp">за посиланням</a>.'
+    )
+    await message.answer(about_text, parse_mode="HTML", reply_markup=get_main_keyboard(), disable_web_page_preview=True)
+
+
 async def menu_route(message: types.Message, state: FSMContext):
     """Handle route button from menu."""
     from .route import cmd_route
@@ -67,9 +84,10 @@ async def set_bot_commands(bot: Bot):
     """Set bot commands menu."""
     commands = [
         BotCommand(command="start", description=CommandText.START),
-        BotCommand(command="route", description=CommandText.ROUTE),
-        BotCommand(command="schedule", description=CommandText.SCHEDULE),
-        BotCommand(command="stations", description=CommandText.STATIONS),
+        # BotCommand(command="route", description=CommandText.ROUTE),
+        # BotCommand(command="schedule", description=CommandText.SCHEDULE),
+        # BotCommand(command="stations", description=CommandText.STATIONS),
+        BotCommand(command="about", description=CommandText.ABOUT),
     ]
     await bot.set_my_commands(commands)
 
@@ -78,11 +96,12 @@ def register_common_handlers(dp: Dispatcher):
     """Register common handlers."""
     # Command handlers - work in any state
     dp.message.register(cmd_start, Command("start"))
+    dp.message.register(cmd_about, Command("about"))
 
     # Menu button handlers - only work when NOT in any state (main menu)
-    dp.message.register(menu_route, StateFilter(None), F.text == ButtonText.ROUTE)
-    dp.message.register(menu_schedule, StateFilter(None), F.text == ButtonText.SCHEDULE)
-    dp.message.register(menu_stations, StateFilter(None), F.text == ButtonText.STATIONS)
+    # dp.message.register(menu_route, StateFilter(None), F.text == ButtonText.ROUTE)
+    # dp.message.register(menu_schedule, StateFilter(None), F.text == ButtonText.SCHEDULE)
+    # dp.message.register(menu_stations, StateFilter(None), F.text == ButtonText.STATIONS)
 
     # Catch-all handler when NOT in a state (for unknown text)
     dp.message.register(catch_all_handler, StateFilter(None))

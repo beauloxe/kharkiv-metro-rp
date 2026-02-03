@@ -141,7 +141,7 @@ class MetroRouter:
 
                     if next_departures:
                         departure = next_departures[0]
-                        departure_dt = datetime.combine(current_time.date(), departure.time)
+                        departure_dt = datetime.combine(current_time.date(), departure.time, current_time.tzinfo)
                         if departure_dt < current_time:
                             departure_dt += timedelta(days=1)
                         current_time = departure_dt

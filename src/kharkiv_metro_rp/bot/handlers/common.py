@@ -99,9 +99,9 @@ def register_common_handlers(dp: Dispatcher):
     dp.message.register(cmd_about, Command("about"))
 
     # Menu button handlers - only work when NOT in any state (main menu)
-    # dp.message.register(menu_route, StateFilter(None), F.text == ButtonText.ROUTE)
-    # dp.message.register(menu_schedule, StateFilter(None), F.text == ButtonText.SCHEDULE)
-    # dp.message.register(menu_stations, StateFilter(None), F.text == ButtonText.STATIONS)
+    dp.message.register(menu_route, StateFilter(None), F.text == ButtonText.ROUTE)
+    dp.message.register(menu_schedule, StateFilter(None), F.text == ButtonText.SCHEDULE)
+    dp.message.register(menu_stations, StateFilter(None), F.text == ButtonText.STATIONS)
 
     # Catch-all handler when NOT in a state (for unknown text)
     dp.message.register(catch_all_handler, StateFilter(None))

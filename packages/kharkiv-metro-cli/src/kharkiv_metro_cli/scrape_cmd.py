@@ -6,7 +6,7 @@ import json
 
 import click
 from click.exceptions import Exit
-from kharkiv_metro_core import Config, MetroDatabase, init_database, init_stations
+from kharkiv_metro_core import Config, init_database
 
 from .utils import console, ensure_db
 

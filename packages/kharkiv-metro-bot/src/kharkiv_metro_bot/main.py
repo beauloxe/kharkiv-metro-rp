@@ -3,7 +3,6 @@
 import asyncio
 import os
 import sys
-from pathlib import Path
 
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage

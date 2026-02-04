@@ -2,7 +2,7 @@
 name = "kharkiv-metro-bot"
 version = "0.1.0"
 description = "Telegram Bot for Kharkiv Metro Route Planner"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "aiogram>=3.0.0",
     "python-dotenv>=1.0.0",
@@ -29,13 +29,13 @@ packages = ["src/kharkiv_metro_bot"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B", "C4", "SIM"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

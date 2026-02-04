@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from kharkiv_metro_core import Config, DayType, MetroDatabase, MetroRouter, Route, init_database, init_schedules
 
 if TYPE_CHECKING:
-    from .constants import LINE_COLOR_EMOJI, LINE_NAME_EMOJI
+    pass
 
 
 def now() -> datetime:

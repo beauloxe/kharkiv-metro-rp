@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import os
 import platform
+import tomllib  # Python 3.11+ only
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
-
-import tomllib  # Python 3.11+ only
 
 DEFAULT_CONFIG = """[database]
 auto = true

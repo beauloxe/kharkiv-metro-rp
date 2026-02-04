@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import os
-import sqlite3
-from datetime import datetime
 from typing import TYPE_CHECKING
 
 import click
 from click.exceptions import Exit
-from kharkiv_metro_core import Config, Line, MetroDatabase, init_database
+from kharkiv_metro_core import Config, MetroDatabase, init_database
 from rich.console import Console
 from rich.table import Table
 

@@ -9,8 +9,6 @@ from aiogram.types import (
 from kharkiv_metro_core import MetroRouter
 
 from .constants import (
-    LINE_DISPLAY_TO_INTERNAL,
-    LINE_INTERNAL_TO_DISPLAY,
     LINE_ORDER,
     ButtonText,
 )

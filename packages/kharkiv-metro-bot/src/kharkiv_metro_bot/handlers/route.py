@@ -28,7 +28,6 @@ from ..utils import (
     build_line_groups,
     format_route,
     generate_route_key,
-    get_current_day_type,
     get_router,
     get_stations_by_line,
     get_stations_by_line_except,

@@ -6,10 +6,10 @@ import json
 
 import click
 from click.exceptions import Exit
-from kharkiv_metro_core import Config, Line, MetroDatabase
+from kharkiv_metro_core import Config, Line
 from rich.table import Table
 
-from .utils import console, ensure_db, get_db_path
+from .utils import console, ensure_db
 
 
 @click.command()

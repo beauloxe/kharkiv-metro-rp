@@ -146,11 +146,29 @@ def display_route_simple(route: Route, lang: str, compact: bool = False) -> None
     total = route.total_duration_minutes
     transfers = format_transfers(route.num_transfers, lang)
 
+    # Group time by line segments (between transfers)
     time_parts = []
-    for seg in route.segments:
-        if not seg.is_transfer and seg.departure_time and seg.arrival_time:
-            dep = seg.departure_time.strftime("%H:%M")
-            arr = seg.arrival_time.strftime("%H:%M")
+    i = 0
+    while i < len(route.segments):
+        seg = route.segments[i]
+
+        if seg.is_transfer:
+            i += 1
+            continue
+
+        # Start of line segment
+        start_time = seg.departure_time
+        end_time = seg.arrival_time
+
+        # Find end of this line section
+        i += 1
+        while i < len(route.segments) and not route.segments[i].is_transfer:
+            end_time = route.segments[i].arrival_time
+            i += 1
+
+        if start_time and end_time:
+            dep = start_time.strftime("%H:%M")
+            arr = end_time.strftime("%H:%M")
             time_parts.append(f"{dep} → {arr}")
 
     if time_parts:

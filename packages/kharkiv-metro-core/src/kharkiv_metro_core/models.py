@@ -228,8 +228,8 @@ LINE_3_STATIONS = [
 
 # Transfer stations (station_id -> transfer_to_station_id)
 TRANSFERS = {
-    "maidan_konstytutsii": "historical_museum",
-    "historical_museum": "maidan_konstytutsii",
+    "maidan_konstytutsii": "istorychnyi_muzei",
+    "istorychnyi_muzei": "maidan_konstytutsii",
     "sportyvna": "metrobudivnykiv",
     "metrobudivnykiv": "sportyvna",
     "university": "derzhprom",

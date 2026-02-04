@@ -102,7 +102,7 @@ STATION_URL_MAPPING = {
     "tkraktokrnyi-zavod": "traktornyi_zavod",
     "industkrialna": "industrialna",
     # Line 2
-    "istokrychnyi-muzei": "historical_museum",
+    "istokrychnyi-muzei": "istorychnyi_muzei",
     "universytet": "university",
     "univekrsytet": "university",  # Typo in weekend URL
     "pushkinska": "yaroslava_mudroho",

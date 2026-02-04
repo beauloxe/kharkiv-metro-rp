@@ -203,7 +203,7 @@ LINE_1_STATIONS = [
 
 # Line 2: Saltivska (Blue)
 LINE_2_STATIONS = [
-    ("historical_museum", "Історичний музей", "Historical Museum"),
+    ("istorychnyi_muzei", "Історичний музей", "Istorychnyi Muzei"),
     ("university", "Університет", "Universytet"),
     ("yaroslava_mudroho", "Ярослава Мудрого", "Yaroslava Mudroho"),
     ("kyivska", "Київська", "Kyivska"),
@@ -242,6 +242,8 @@ ALIAS_STATION_NAMES = {
     "героїв праці": "Салтівська",
     "проспект гагаріна": "Левада",
     "пушкінська": "Ярослава Мудрого",
+    "завод імені малишева": "Заводська",
+    "південний вокзал": "Вокзальна",
     # Aliases
     "23": "23 Серпня",
     "барабашова": "Академіка Барабашова",

@@ -1,51 +1,35 @@
 [project]
-name = "kharkiv-metro-rp"
+name = "kharkiv-metro"
 version = "0.1.0"
-description = "CLI and MCP server for Kharkiv metro route planning"
+description = "Kharkiv Metro Route Planner - monorepo workspace"
 authors = [{name = "User", email = "user@example.com"}]
-readme = "README.md"
-requires-python = ">=3.10"
-dependencies = [
-    "click>=8.0.0",
-    "beautifulsoup4>=4.12.0",
-    "requests>=2.31.0",
-    "mcp>=0.9.0",
-    "rich>=13.0.0",
-    "pydantic>=2.0.0",
-    "toml>=0.10.2",
-    "aiogram>=3.0.0",
-    "python-dotenv>=1.0.0",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
-    "ruff>=0.1.0",
-    "mypy>=1.7.0",
-]
-
-[project.scripts]
-metro = "kharkiv_metro_rp.cli.main:cli"
-metro-mcp = "kharkiv_metro_rp.mcp.server:main"
-metro-bot = "kharkiv_metro_rp.bot.main:main_sync"
+requires-python = ">=3.11"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/kharkiv_metro_rp"]
+bypass-selection = true
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+kharkiv-metro-core = { workspace = true }
+kharkiv-metro-cli = { workspace = true }
+kharkiv-metro-bot = { workspace = true }
+kharkiv-metro-mcp = { workspace = true }
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B", "C4", "SIM"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

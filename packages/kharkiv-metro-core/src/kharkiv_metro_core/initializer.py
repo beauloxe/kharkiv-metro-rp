@@ -1,0 +1,56 @@
+"""Initialize database with station data."""
+
+from __future__ import annotations
+
+from .database import MetroDatabase
+from .models import create_stations
+
+
+def init_stations(db: MetroDatabase) -> None:
+    """Initialize database with station data."""
+    stations = create_stations()
+
+    station_data = []
+    for station in stations.values():
+        station_data.append(
+            {
+                "id": station.id,
+                "name_ua": station.name_ua,
+                "name_en": station.name_en,
+                "line": station.line.value,
+                "order": station.order,
+                "transfer_to": station.transfer_to,
+            }
+        )
+
+    db.save_stations(station_data)
+    print(f"Initialized {len(station_data)} stations")
+
+
+def init_schedules(db: MetroDatabase) -> None:
+    """Initialize database with schedules by scraping."""
+    try:
+        from .scraper import MetroScraper
+
+        scraper = MetroScraper()
+
+        print("Scraping all schedules...")
+        all_schedules = scraper.scrape_all_schedules()
+        count = 0
+        for station_schedules in all_schedules.values():
+            for schedule in station_schedules:
+                db.save_schedule(schedule)
+                count += 1
+        print(f"Saved {count} schedules total")
+
+    except Exception as e:
+        print(f"Warning: Could not scrape schedules: {e}")
+        print("Schedules will need to be loaded manually")
+
+
+def init_database(db_path: str = "data/metro.db") -> MetroDatabase:
+    """Initialize database with all static data."""
+    db = MetroDatabase(db_path)
+    init_stations(db)
+    init_schedules(db)
+    return db

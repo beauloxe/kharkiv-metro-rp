@@ -6,7 +6,6 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 from kharkiv_metro_core import Config
 
@@ -26,7 +25,7 @@ def is_analytics_enabled() -> bool:
     return ANALYTICS_ENABLED
 
 
-def get_admin_id() -> Optional[int]:
+def get_admin_id() -> int | None:
     """Get admin user ID from environment."""
     admin_id = os.getenv("ADMIN_USER_ID")
     return int(admin_id) if admin_id else None
@@ -188,10 +187,10 @@ class AnalyticsDatabase:
 
 
 # Global instance
-_analytics_db: Optional[AnalyticsDatabase] = None
+_analytics_db: AnalyticsDatabase | None = None
 
 
-def get_analytics_db() -> Optional[AnalyticsDatabase]:
+def get_analytics_db() -> AnalyticsDatabase | None:
     """Get or create analytics database instance."""
     global _analytics_db
     if _analytics_db is None and is_analytics_enabled():

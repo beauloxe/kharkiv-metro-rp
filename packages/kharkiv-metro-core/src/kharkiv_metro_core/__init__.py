@@ -23,15 +23,18 @@ from .router import MetroRouter
 # These are heavy dependencies only needed for scraping operations
 _MetroScraper = None
 
+
 def __getattr__(name):
     """Lazy load MetroScraper to avoid importing heavy dependencies on startup."""
     global _MetroScraper
     if name == "MetroScraper":
         if _MetroScraper is None:
             from .scraper import MetroScraper as _MS
+
             _MetroScraper = _MS
         return _MetroScraper
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     # Config

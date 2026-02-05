@@ -17,6 +17,7 @@ async def cmd_stats(message: types.Message):
     if not is_admin(message.from_user.id):
         # Treat as unknown command for non-admins
         from ..keyboards import get_main_keyboard
+
         await message.answer(
             "🚇 Бот для планування маршрутів Харківського метро\n\nОберіть дію:",
             reply_markup=get_main_keyboard(),

@@ -479,12 +479,17 @@ async def back_from_time_choice(message: types.Message, state: FSMContext, lang:
     router = get_router()
     stations = get_stations_by_line_except(router, to_line, from_station, lang)
 
+    # Convert internal line name to display name with emoji
+    from kharkiv_metro_core import get_line_display_by_internal
+
+    line_display = get_line_display_by_internal(to_line, lang)
+
     await handle_back(
         message,
         state,
         lang,
         RouteStates.waiting_for_to_station,
-        get_text("select_station_line", lang, line=to_line),
+        get_text("select_station_line", lang, line=line_display),
         get_stations_keyboard(stations, lang),
     )
 

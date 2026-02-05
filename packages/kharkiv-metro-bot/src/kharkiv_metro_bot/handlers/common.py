@@ -99,13 +99,26 @@ async def catch_all_handler(message: types.Message, lang: Language = "ua"):
     )
 
 
-async def reset_state_handler(message: types.Message, state: FSMContext, lang: Language = "ua"):
-    """Handle any unhandled messages when IN a state - reset to main menu."""
-    await state.clear()
-    await message.answer(
-        get_text("session_restored", lang),
-        reply_markup=get_main_keyboard(lang),
-    )
+# Valid button texts that should NOT trigger reset
+def get_valid_buttons() -> list[str]:
+    """Get list of valid button texts that should not trigger session reset."""
+    return [
+        # Menu buttons
+        get_text("route", "ua"),
+        get_text("route", "en"),
+        get_text("schedule", "ua"),
+        get_text("schedule", "en"),
+        get_text("stations", "ua"),
+        get_text("stations", "en"),
+        # Navigation buttons
+        get_text("back", "ua"),
+        get_text("back", "en"),
+        get_text("cancel", "ua"),
+        get_text("cancel", "en"),
+        # Language selection
+        "🇺🇦 Українська",
+        "🇬🇧 English",
+    ]
 
 
 async def set_bot_commands(bot: Bot):
@@ -140,6 +153,3 @@ def register_common_handlers(dp: Dispatcher):
 
     # Catch-all handler when NOT in a state (for unknown text)
     dp.message.register(catch_all_handler, StateFilter(None))
-
-    # Reset handler when IN any state
-    dp.message.register(reset_state_handler, ~StateFilter(None))

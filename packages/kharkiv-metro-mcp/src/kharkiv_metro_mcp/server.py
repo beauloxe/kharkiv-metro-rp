@@ -165,10 +165,7 @@ class MetroMCPServer:
 
         # Parse day type
         day_type_str = arguments.get("day_type")
-        if day_type_str:
-            day_type = DayType.WEEKDAY if day_type_str == "weekday" else DayType.WEEKEND
-        else:
-            day_type = None
+        day_type = (DayType.WEEKDAY if day_type_str == "weekday" else DayType.WEEKEND) if day_type_str else None
 
         # Find stations
         from_st = self.router.find_station_by_name(from_station, lang)
@@ -350,10 +347,7 @@ class MetroMCPServer:
 
         name_attr = f"name_{lang}"
 
-        if line:
-            stations_data = self.router.db.get_stations_by_line(line)
-        else:
-            stations_data = self.router.db.get_all_stations()
+        stations_data = self.router.db.get_stations_by_line(line) if line else self.router.db.get_all_stations()
 
         lines = []
         for station in stations_data:

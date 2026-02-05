@@ -25,7 +25,7 @@ def init(ctx: click.Context, output: str) -> None:
     try:
         config: Config = ctx.obj["config"]
         db_path = config.get_db_path()
-        db = init_database(db_path)
+        init_database(db_path)
 
         if output == "json":
             click.echo(json.dumps({"status": "ok", "path": db_path}))

@@ -152,10 +152,7 @@ def display_route_simple(route: Route, lang: str, compact: bool = False) -> None
     name_attr = f"name_{lang}"
 
     # Build path string
-    if compact:
-        path_str = _build_compact_path(route, name_attr)
-    else:
-        path_str = _build_full_path(route, name_attr)
+    path_str = _build_compact_path(route, name_attr) if compact else _build_full_path(route, name_attr)
 
     # Time info
     total = route.total_duration_minutes

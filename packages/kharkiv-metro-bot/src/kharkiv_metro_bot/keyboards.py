@@ -116,9 +116,9 @@ def build_reminder_keyboard(
 ) -> InlineKeyboardMarkup:
     """Build inline keyboard with reminder buttons."""
     buttons = []
-    line_ids = list(line_groups.keys())
+    list(line_groups.keys())
 
-    for idx, (line_id, segments) in enumerate(line_groups.items()):
+    for idx, (_line_id, segments) in enumerate(line_groups.items()):
         # Skip short trips (1 station) - no reminder needed
         if len(segments) <= 1:
             continue

@@ -90,7 +90,7 @@ class MetroRouter:
 
         # Find alternative routes by trying different departure times
         current_time = departure_time
-        for i in range(1, num_options * 2):
+        for _i in range(1, num_options * 2):
             if len(routes) >= num_options:
                 break
 
@@ -335,7 +335,7 @@ class MetroRouter:
         if len(route1.segments) != len(route2.segments):
             return False
 
-        for s1, s2 in zip(route1.segments, route2.segments):
+        for s1, s2 in zip(route1.segments, route2.segments, strict=False):
             if s1.from_station.id != s2.from_station.id:
                 return False
             if s1.to_station.id != s2.to_station.id:

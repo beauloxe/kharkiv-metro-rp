@@ -352,7 +352,7 @@ class AsyncMetroScraper:
 
             # Collect all stations to fetch schedules for
             schedule_tasks = []
-            for (day_type, line_slug, _), stations in zip(station_tasks, station_results):
+            for (day_type, line_slug, _), stations in zip(station_tasks, station_results, strict=False):
                 if isinstance(stations, Exception):
                     print(f"Error fetching {line_slug} for {day_type}: {stations}")
                     continue
@@ -370,7 +370,7 @@ class AsyncMetroScraper:
             schedule_results = await asyncio.gather(*[t[1] for t in schedule_tasks], return_exceptions=True)
 
             # Collect results
-            for (station_id, _), schedules in zip(schedule_tasks, schedule_results):
+            for (station_id, _), schedules in zip(schedule_tasks, schedule_results, strict=False):
                 if isinstance(schedules, Exception):
                     print(f"Error fetching schedule for {station_id}: {schedules}")
                     continue
@@ -803,7 +803,7 @@ class AsyncMetroScraper:
             station_results = await asyncio.gather(*[t[2] for t in station_tasks], return_exceptions=True)
 
             schedule_tasks = []
-            for (day_type, line_slug, _), stations in zip(station_tasks, station_results):
+            for (day_type, line_slug, _), stations in zip(station_tasks, station_results, strict=False):
                 if isinstance(stations, Exception):
                     print(f"Error fetching {line_slug} for {day_type}: {stations}")
                     continue
@@ -819,7 +819,7 @@ class AsyncMetroScraper:
 
             schedule_results = await asyncio.gather(*[t[1] for t in schedule_tasks], return_exceptions=True)
 
-            for (station_id, _), schedules in zip(schedule_tasks, schedule_results):
+            for (station_id, _), schedules in zip(schedule_tasks, schedule_results, strict=False):
                 if isinstance(schedules, Exception):
                     print(f"Error fetching schedule for {station_id}: {schedules}")
                     continue

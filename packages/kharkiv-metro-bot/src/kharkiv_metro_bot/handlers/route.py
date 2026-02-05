@@ -429,10 +429,7 @@ async def _build_and_send_route(
 
         # Build reminder keyboard only if there's at least one line with 2+ stations
         has_long_line = any(len(segments) > 1 for segments in line_groups.values())
-        if has_long_line:
-            reminder_kb = build_reminder_keyboard(route_key, line_groups)
-        else:
-            reminder_kb = None
+        reminder_kb = build_reminder_keyboard(route_key, line_groups) if has_long_line else None
 
         if reminder_kb and reminder_kb.inline_keyboard:
             await message.answer(result, reply_markup=reminder_kb)
@@ -506,10 +503,7 @@ async def process_reminder(callback: types.CallbackQuery):
     # Calculate wait time until departure from station before last (when to remind)
     current_time = now()
     # Use departure time from the last segment's from_station (second-to-last station of the line)
-    if len(segments) >= 1:
-        remind_time = segments[-1].departure_time
-    else:
-        remind_time = None
+    remind_time = segments[-1].departure_time if len(segments) >= 1 else None
 
     if remind_time:
         wait_seconds = (remind_time - current_time).total_seconds()
@@ -543,7 +537,7 @@ async def cancel_reminder(callback: types.CallbackQuery):
 
     route_key = parts[1] if len(parts) > 1 else ""
     try:
-        segment_idx = int(parts[2]) if len(parts) > 2 else 0
+        int(parts[2]) if len(parts) > 2 else 0
     except ValueError:
         await callback.answer("❌ Помилка: неправильний формат даних")
         return

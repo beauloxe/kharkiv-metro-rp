@@ -3,3 +3,6 @@ startCommand = "uv run metro-bot"
 
 [env]
 DB_PATH = "/db/metro.db"
+ENABLE_ANALYTICS = true
+ANALYTICS_DB_PATH = "/db/analytics.db"
+

@@ -54,7 +54,7 @@ class MetroGraph:
             lines_stations[station.line].append(station)
 
         # Sort by order and add edges
-        for line, stations in lines_stations.items():
+        for _line, stations in lines_stations.items():
             stations.sort(key=attrgetter("order"))
             for i in range(len(stations) - 1):
                 current = stations[i]

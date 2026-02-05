@@ -34,10 +34,7 @@ def scrape(ctx: click.Context, init_db: bool, output: str) -> None:
         db_path = config.get_db_path()
 
         # Use config database path
-        if init_db:
-            db = init_database(db_path)
-        else:
-            db = ensure_db(db_path)
+        db = init_database(db_path) if init_db else ensure_db(db_path)
 
         if output == "table":
             console.print("[cyan]Scraping schedules from metro.kharkiv.ua...[/cyan]")

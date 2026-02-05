@@ -139,7 +139,13 @@ class Config:
             return str(self.data_dir / "metro.db")
 
     def get_analytics_db_path(self) -> str:
-        """Get analytics database path."""
+        """Get analytics database path.
+        
+        Supports ANALYTICS_DB_PATH environment variable for persistent storage.
+        """
+        env_path = os.getenv("ANALYTICS_DB_PATH")
+        if env_path:
+            return os.path.expanduser(env_path)
         return str(self.data_dir / "analytics.db")
 
     def is_analytics_enabled(self) -> bool:

@@ -17,6 +17,7 @@ from kharkiv_metro_bot.handlers import (
     register_stations_handlers,
 )
 from kharkiv_metro_bot.handlers.common import set_bot_commands
+from kharkiv_metro_bot.middleware.i18n_middleware import I18nMiddleware
 
 # Load .env from current working directory
 load_dotenv()
@@ -84,7 +85,9 @@ async def main() -> None:
     bot = Bot(token=get_token())
     dp = Dispatcher(storage=MemoryStorage())
 
-    # Add analytics middleware
+    # Add middleware
+    dp.message.middleware(I18nMiddleware())
+    dp.callback_query.middleware(I18nMiddleware())
     if is_analytics_enabled():
         dp.message.middleware(AnalyticsMiddleware())
         dp.callback_query.middleware(AnalyticsMiddleware())

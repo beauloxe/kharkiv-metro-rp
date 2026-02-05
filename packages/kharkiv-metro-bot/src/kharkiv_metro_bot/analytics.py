@@ -9,6 +9,8 @@ from pathlib import Path
 
 from kharkiv_metro_core import Config
 
+from .i18n import DEFAULT_LANGUAGE, Language
+
 # Get config instance
 _config = Config()
 
@@ -16,8 +18,10 @@ _config = Config()
 ANALYTICS_ENABLED = os.getenv("ENABLE_ANALYTICS", str(_config.is_analytics_enabled())).lower() == "true"
 ANALYTICS_SALT = os.getenv("ANALYTICS_SALT", _config.get("analytics.salt", "default-salt-change-me"))
 
-# Database path (uses same data directory as metro.db)
+# Database path (uses same data directory as metro.db, or env var for persistence)
 ANALYTICS_DB_PATH = Path(_config.get_analytics_db_path())
+# Ensure parent directory exists (especially important for custom paths)
+ANALYTICS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
 def is_analytics_enabled() -> bool:
@@ -66,9 +70,16 @@ class AnalyticsDatabase:
                     user_hash TEXT PRIMARY KEY,
                     first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    interaction_count INTEGER DEFAULT 1
+                    interaction_count INTEGER DEFAULT 1,
+                    language TEXT DEFAULT 'ua'
                 )
             """)
+
+            # Migration: add language column if it doesn't exist (for existing databases)
+            cursor.execute("PRAGMA table_info(users)")
+            columns = [col[1] for col in cursor.fetchall()]
+            if "language" not in columns:
+                cursor.execute("ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'ua'")
 
             # Interactions table - feature usage
             cursor.execute("""
@@ -124,6 +135,56 @@ class AnalyticsDatabase:
                 (user_hash, feature),
             )
 
+            conn.commit()
+
+    def get_user_language(self, telegram_user_id: int) -> Language:
+        """Get user language preference.
+
+        Args:
+            telegram_user_id: Telegram user ID
+
+        Returns:
+            Language code ('ua' or 'en')
+        """
+        if not is_analytics_enabled():
+            return DEFAULT_LANGUAGE
+
+        user_hash = anonymize_user_id(telegram_user_id)
+
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT language FROM users WHERE user_hash = ?",
+                (user_hash,)
+            )
+            row = cursor.fetchone()
+            if row and row["language"]:
+                return row["language"]
+            return DEFAULT_LANGUAGE
+
+    def set_user_language(self, telegram_user_id: int, language: Language) -> None:
+        """Set user language preference.
+
+        Args:
+            telegram_user_id: Telegram user ID
+            language: Language code ('ua' or 'en')
+        """
+        if not is_analytics_enabled():
+            return
+
+        user_hash = anonymize_user_id(telegram_user_id)
+
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO users (user_hash, language)
+                VALUES (?, ?)
+                ON CONFLICT(user_hash) DO UPDATE SET
+                    language = excluded.language
+            """,
+                (user_hash, language),
+            )
             conn.commit()
 
     def get_stats(self) -> dict:
@@ -206,3 +267,30 @@ async def track_user(telegram_user_id: int, feature: str = "general") -> None:
     db = get_analytics_db()
     if db:
         db.track_user(telegram_user_id, feature)
+
+
+def get_user_language(telegram_user_id: int) -> Language:
+    """Get user language preference (helper function).
+
+    Args:
+        telegram_user_id: Telegram user ID
+
+    Returns:
+        Language code ('ua' or 'en')
+    """
+    db = get_analytics_db()
+    if db:
+        return db.get_user_language(telegram_user_id)
+    return DEFAULT_LANGUAGE
+
+
+def set_user_language(telegram_user_id: int, language: Language) -> None:
+    """Set user language preference (helper function).
+
+    Args:
+        telegram_user_id: Telegram user ID
+        language: Language code ('ua' or 'en')
+    """
+    db = get_analytics_db()
+    if db:
+        db.set_user_language(telegram_user_id, language)

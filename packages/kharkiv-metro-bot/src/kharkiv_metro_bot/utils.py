@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from kharkiv_metro_core import Config, DayType, MetroDatabase, MetroRouter, Route, init_database, init_schedules
+from .i18n import Language
 
 if TYPE_CHECKING:
     pass
@@ -50,29 +51,62 @@ def get_router() -> MetroRouter:
     return MetroRouter(db=db)
 
 
-def get_stations_by_line(router: MetroRouter, line_name: str) -> list[str]:
-    """Get station names for a given line."""
-    return [st.name_ua for st in router.stations.values() if st.line.display_name_ua == line_name]
-
-
-def get_stations_by_line_except(router: MetroRouter, line_name: str, exclude_station: str) -> list[str]:
-    """Get station names for a line, excluding one station."""
+def get_stations_by_line(router: MetroRouter, line_name: str, lang: Language = "ua") -> list[str]:
+    """Get station names for a given line.
+    
+    Args:
+        router: MetroRouter instance
+        line_name: Internal line name (e.g., "Холодногірсько-заводська")
+        lang: Language code
+        
+    Returns:
+        List of station names in the requested language
+    """
+    name_attr = "name_ua" if lang == "ua" else "name_en"
+    # Always compare with display_name_ua since line_name is internal (Ukrainian)
     return [
-        st.name_ua
+        getattr(st, name_attr)
         for st in router.stations.values()
-        if st.line.display_name_ua == line_name and st.name_ua != exclude_station
+        if st.line.display_name_ua == line_name
     ]
 
 
-def format_route(route: Route) -> str:
+def get_stations_by_line_except(
+    router: MetroRouter, line_name: str, exclude_station: str, lang: Language = "ua"
+) -> list[str]:
+    """Get station names for a line, excluding one station.
+    
+    Args:
+        router: MetroRouter instance
+        line_name: Internal line name (e.g., "Холодногірсько-заводська")
+        exclude_station: Station name to exclude
+        lang: Language code
+        
+    Returns:
+        List of station names in the requested language
+    """
+    name_attr = "name_ua" if lang == "ua" else "name_en"
+    # Always compare with display_name_ua since line_name is internal (Ukrainian)
+    return [
+        getattr(st, name_attr)
+        for st in router.stations.values()
+        if st.line.display_name_ua == line_name and getattr(st, name_attr) != exclude_station
+    ]
+
+
+def format_route(route: Route, lang: Language = "ua") -> str:
     """Format route for Telegram."""
     from .constants import LINE_COLOR_EMOJI
+    from .i18n import get_text
+
+    name_attr = "name_ua" if lang == "ua" else "name_en"
+    min_text = "хв" if lang == "ua" else "min"
 
     lines = [
-        f"🚇 {route.segments[0].from_station.name_ua} → {route.segments[-1].to_station.name_ua}",
-        f"⏱ {route.total_duration_minutes} хв",
+        f"🚇 {getattr(route.segments[0].from_station, name_attr)} → {getattr(route.segments[-1].to_station, name_attr)}",
+        f"⏱ {route.total_duration_minutes} {min_text}",
         "",
-        "📍 Маршрут:",
+        f"📍 {get_text('route', lang)}:",
     ]
 
     i = 0
@@ -81,7 +115,7 @@ def format_route(route: Route) -> str:
 
         if seg.is_transfer:
             lines.append("")
-            lines.append(f"🔄 {seg.from_station.name_ua} → {seg.to_station.name_ua} ({seg.duration_minutes} хв)")
+            lines.append(f"🔄 {getattr(seg.from_station, name_attr)} → {getattr(seg.to_station, name_attr)} ({seg.duration_minutes} {min_text})")
             lines.append("")
             i += 1
         else:
@@ -104,25 +138,31 @@ def format_route(route: Route) -> str:
             time_str = (
                 f"{start_time.strftime('%H:%M')} → {end_time.strftime('%H:%M')}"
                 if start_time and end_time
-                else f"{total_duration} хв"
+                else f"{total_duration} {min_text}"
             )
 
-            lines.append(f"{color_emoji} {start_station.name_ua} → {end_station.name_ua}")
-            lines.append(f"• {time_str} ({total_duration} хв)")
+            lines.append(f"{color_emoji} {getattr(start_station, name_attr)} → {getattr(end_station, name_attr)}")
+            lines.append(f"• {time_str} ({total_duration} {min_text})")
 
     return "\n".join(lines)
 
 
-def format_schedule(station_name: str, schedules: list, router: MetroRouter) -> str:
+def format_schedule(station_name: str, schedules: list, router: MetroRouter, lang: Language = "ua") -> str:
     """Format schedule for Telegram."""
-    lines = [f"🚇 {station_name}", f"📅 {'Будні' if schedules[0].day_type.value == 'weekday' else 'Вихідні'}", ""]
+    from .i18n import get_text
+
+    name_attr = "name_ua" if lang == "ua" else "name_en"
+    day_type_text = get_text("weekday" if schedules[0].day_type.value == "weekday" else "weekend", lang)
+
+    lines = [f"🚇 {station_name}", f"📅 {day_type_text}", ""]
 
     for sch in schedules[:2]:  # Up to 2 directions
         dir_station = router.stations.get(sch.direction_station_id)
         if not dir_station:
             continue
 
-        lines.append(f"➡️ Напрямок: {dir_station.name_ua}")
+        direction_text = get_text("cmd_schedule", lang) if lang == "en" else "Напрямок"
+        lines.append(f"➡️ {direction_text}: {getattr(dir_station, name_attr)}")
 
         # Group by hour
         by_hour: dict[int, list[int]] = {}
@@ -138,12 +178,13 @@ def format_schedule(station_name: str, schedules: list, router: MetroRouter) -> 
     return "\n".join(lines)
 
 
-def format_stations_list(line_name: str, stations: list[str]) -> str:
+def format_stations_list(line_name: str, stations: list[str], lang: Language = "ua") -> str:
     """Format stations list."""
-    from .constants import LINE_NAME_EMOJI
-
-    emoji = LINE_NAME_EMOJI.get(line_name, "⚪")
-    header = f"{emoji} {line_name}:\n"
+    from .i18n import get_line_display_by_internal
+    
+    # line_name is internal (Ukrainian), translate to display name
+    display_name = get_line_display_by_internal(line_name, lang)
+    header = f"{display_name}:\n"
     body = "\n".join(f"• {name}" for name in stations)
     return header + body
 

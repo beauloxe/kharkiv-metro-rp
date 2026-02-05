@@ -13,7 +13,6 @@ from .constants import (
 )
 from .keyboards import (
     build_reminder_keyboard,
-    get_cancel_keyboard,
     get_day_type_keyboard,
     get_lines_keyboard,
     get_main_keyboard,
@@ -44,7 +43,6 @@ __all__ = [
     "get_lines_keyboard",
     "get_day_type_keyboard",
     "get_time_choice_keyboard",
-    "get_cancel_keyboard",
     "get_stations_keyboard",
     "get_stations_keyboard_by_line",
     "build_reminder_keyboard",

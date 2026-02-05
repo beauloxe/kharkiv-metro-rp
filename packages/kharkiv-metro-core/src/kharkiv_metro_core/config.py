@@ -24,6 +24,10 @@ compact = false  # true = show only key stations (start, transfers, end)
 [scraper]
 timeout = 30
 user_agent = "kharkiv-metro-rp/1.0"
+
+[analytics]
+enabled = true
+salt = "default-salt-change-me"  # Змініть для продакшену
 """
 
 
@@ -133,6 +137,14 @@ class Config:
             if path:
                 return os.path.expanduser(path)
             return str(self.data_dir / "metro.db")
+
+    def get_analytics_db_path(self) -> str:
+        """Get analytics database path."""
+        return str(self.data_dir / "analytics.db")
+
+    def is_analytics_enabled(self) -> bool:
+        """Check if analytics is enabled."""
+        return self.get("analytics.enabled", True)
 
     def to_dict(self) -> dict[str, Any]:
         """Return configuration as dictionary."""

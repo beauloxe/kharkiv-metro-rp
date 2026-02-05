@@ -26,6 +26,14 @@ def get_db_path() -> str:
     return db_path
 
 
+def get_analytics_db_path() -> str:
+    """Get analytics database path."""
+    config = Config()
+    analytics_path = config.get_analytics_db_path()
+    Path(analytics_path).parent.mkdir(parents=True, exist_ok=True)
+    return analytics_path
+
+
 def get_router() -> MetroRouter:
     """Get MetroRouter instance."""
     db_path = get_db_path()

@@ -8,7 +8,9 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from dotenv import load_dotenv
 
+from kharkiv_metro_bot.analytics import is_analytics_enabled, track_user
 from kharkiv_metro_bot.handlers import (
+    register_admin_handlers,
     register_common_handlers,
     register_route_handlers,
     register_schedule_handlers,
@@ -18,6 +20,35 @@ from kharkiv_metro_bot.handlers.common import set_bot_commands
 
 # Load .env from current working directory
 load_dotenv()
+
+
+# Analytics middleware
+class AnalyticsMiddleware:
+    """Middleware to track all user interactions."""
+
+    def __init__(self):
+        self.feature_map = {
+            "/start": "start",
+            "/about": "about",
+            "/route": "route",
+            "/schedule": "schedule",
+            "/stations": "stations",
+            "/stats": "admin_stats",
+        }
+
+    async def __call__(self, handler, event, data):
+        if is_analytics_enabled() and hasattr(event, "from_user") and event.from_user:
+            # Determine feature from message text or callback
+            feature = "interaction"
+            if hasattr(event, "text") and event.text:
+                text = event.text.split()[0]  # Get command without args
+                feature = self.feature_map.get(text, "message")
+            elif hasattr(event, "data") and event.data:
+                feature = "callback"
+
+            await track_user(event.from_user.id, feature)
+
+        return await handler(event, data)
 
 
 def get_token() -> str:
@@ -30,7 +61,9 @@ def get_token() -> str:
 
 def register_handlers(dp: Dispatcher) -> None:
     """Register all handlers in correct order."""
-    # Register specific handlers first (they have state filters)
+    # Register admin handlers first
+    register_admin_handlers(dp)
+    # Register specific handlers (they have state filters)
     register_route_handlers(dp)
     register_schedule_handlers(dp)
     register_stations_handlers(dp)
@@ -42,8 +75,19 @@ async def main() -> None:
     """Run the bot."""
     print("Starting bot...")
 
+    # Show analytics status
+    if is_analytics_enabled():
+        print("Analytics: Enabled")
+    else:
+        print("Analytics: Disabled")
+
     bot = Bot(token=get_token())
     dp = Dispatcher(storage=MemoryStorage())
+
+    # Add analytics middleware
+    if is_analytics_enabled():
+        dp.message.middleware(AnalyticsMiddleware())
+        dp.callback_query.middleware(AnalyticsMiddleware())
 
     register_handlers(dp)
     await set_bot_commands(bot)

@@ -4,11 +4,11 @@ from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import BotCommand
+from kharkiv_metro_core import Language, get_text
 
+from ..analytics import get_user_language, set_user_language
 from ..constants import CommandText
-from ..i18n import Language, get_text
-from ..analytics import set_user_language, get_user_language
-from ..keyboards import get_lines_keyboard, get_main_keyboard, get_language_keyboard
+from ..keyboards import get_language_keyboard, get_lines_keyboard, get_main_keyboard
 
 
 async def cmd_start(message: types.Message, lang: Language = "ua"):
@@ -23,10 +23,7 @@ async def cmd_about(message: types.Message, lang: Language = "ua"):
     """Handle /about command."""
     about_text = get_text("about_message", lang)
     await message.answer(
-        about_text, 
-        parse_mode="HTML", 
-        reply_markup=get_main_keyboard(lang), 
-        disable_web_page_preview=True
+        about_text, parse_mode="HTML", reply_markup=get_main_keyboard(lang), disable_web_page_preview=True
     )
 
 
@@ -42,7 +39,7 @@ async def cmd_language(message: types.Message, state: FSMContext):
 async def process_language_selection(message: types.Message, state: FSMContext):
     """Process language selection."""
     user_id = message.from_user.id
-    
+
     if message.text == "🇺🇦 Українська":
         set_user_language(user_id, "ua")
         await message.answer(
@@ -63,7 +60,7 @@ async def process_language_selection(message: types.Message, state: FSMContext):
             reply_markup=get_language_keyboard(),
         )
         return
-    
+
     await state.clear()
 
 
@@ -133,20 +130,12 @@ def register_common_handlers(dp: Dispatcher):
 
     # Menu button handlers - only work when NOT in any state (main menu)
     # Use i18n to check button text in both languages
+    dp.message.register(menu_route, StateFilter(None), F.text.in_([get_text("route", "ua"), get_text("route", "en")]))
     dp.message.register(
-        menu_route, 
-        StateFilter(None), 
-        F.text.in_([get_text("route", "ua"), get_text("route", "en")])
+        menu_schedule, StateFilter(None), F.text.in_([get_text("schedule", "ua"), get_text("schedule", "en")])
     )
     dp.message.register(
-        menu_schedule, 
-        StateFilter(None), 
-        F.text.in_([get_text("schedule", "ua"), get_text("schedule", "en")])
-    )
-    dp.message.register(
-        menu_stations, 
-        StateFilter(None), 
-        F.text.in_([get_text("stations", "ua"), get_text("stations", "en")])
+        menu_stations, StateFilter(None), F.text.in_([get_text("stations", "ua"), get_text("stations", "en")])
     )
 
     # Catch-all handler when NOT in a state (for unknown text)

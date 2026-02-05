@@ -9,29 +9,10 @@ from typing import TYPE_CHECKING
 import click
 from click.exceptions import Exit
 from kharkiv_metro_core import Config, DayType, MetroDatabase, MetroRouter
+from kharkiv_metro_core import get_text as tr
 from rich.table import Table
 
 from .utils import console
-
-# Translations
-I18N = {
-    "ua": {
-        "Hour": "Година",
-        "Operating hours": "Години роботи",
-        "CLOSED": "ЗАКРИТО",
-    },
-    "en": {
-        "Hour": "Hour",
-        "Operating hours": "Operating hours",
-        "CLOSED": "CLOSED",
-    },
-}
-
-
-def tr(key: str, lang: str = "ua") -> str:
-    """Get translation."""
-    return I18N.get(lang, I18N["ua"]).get(key, key)
-
 
 if TYPE_CHECKING:
     from click.core import Context

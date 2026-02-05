@@ -3,10 +3,9 @@
 from aiogram import Dispatcher, F, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from kharkiv_metro_core import DayType
+from kharkiv_metro_core import DAY_TYPE_DISPLAY_TO_INTERNAL, LINE_DISPLAY_TO_INTERNAL, DayType, Language, get_text
 
 from ..constants import LINE_INTERNAL_TO_DISPLAY
-from ..i18n import DAY_TYPE_DISPLAY_TO_INTERNAL, LINE_DISPLAY_TO_INTERNAL, Language, get_text
 from ..keyboards import (
     get_day_type_keyboard,
     get_lines_keyboard,
@@ -29,7 +28,7 @@ async def cmd_schedule(message: types.Message, state: FSMContext, lang: Language
         await state.set_state(ScheduleStates.waiting_for_line)
 
         # Get valid lines for current language
-        from ..i18n import get_line_display_name
+        from kharkiv_metro_core import get_line_display_name
 
         valid_lines = [
             get_line_display_name("kholodnohirsko_zavodska", lang),

@@ -3,8 +3,8 @@
 from aiogram import Dispatcher, F, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
+from kharkiv_metro_core import LINE_DISPLAY_TO_INTERNAL, Language, get_text
 
-from ..i18n import Language, get_text, LINE_DISPLAY_TO_INTERNAL
 from ..keyboards import get_lines_keyboard, get_main_keyboard
 from ..states import StationsStates
 from ..utils import format_stations_list, get_router, get_stations_by_line
@@ -13,15 +13,16 @@ from ..utils import format_stations_list, get_router, get_stations_by_line
 async def cmd_stations(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Handle /stations command."""
     await state.set_state(StationsStates.waiting_for_line)
-    
+
     # Get valid lines for current language
-    from ..i18n import get_line_display_name
+    from kharkiv_metro_core import get_line_display_name
+
     valid_lines = [
         get_line_display_name("kholodnohirsko_zavodska", lang),
         get_line_display_name("saltivska", lang),
         get_line_display_name("oleksiivska", lang),
     ]
-    
+
     msg = await message.answer(
         get_text("select_line", lang),
         reply_markup=get_lines_keyboard(lang),
@@ -33,7 +34,7 @@ async def process_line_selection(message: types.Message, state: FSMContext, lang
     """Process line selection and show stations."""
     # Convert display name directly to internal using combined mapping
     selected_line = LINE_DISPLAY_TO_INTERNAL.get(message.text)
-    
+
     if not selected_line:
         await message.answer(
             get_text("error_unknown_line", lang),

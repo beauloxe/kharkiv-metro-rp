@@ -7,10 +7,16 @@ from datetime import datetime
 from aiogram import Dispatcher, F, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from kharkiv_metro_core import DayType, MetroClosedError
+from kharkiv_metro_core import (
+    DAY_TYPE_DISPLAY_TO_INTERNAL,
+    LINE_DISPLAY_TO_INTERNAL,
+    DayType,
+    Language,
+    MetroClosedError,
+    get_text,
+)
 
 from ..constants import LINE_INTERNAL_TO_DISPLAY
-from ..i18n import Language, get_text, LINE_DISPLAY_TO_INTERNAL, DAY_TYPE_DISPLAY_TO_INTERNAL
 from ..keyboards import (
     build_reminder_keyboard,
     get_day_type_keyboard,
@@ -40,15 +46,16 @@ _active_routes: dict[str, tuple] = {}
 async def cmd_route(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Start route conversation."""
     await state.set_state(RouteStates.waiting_for_from_line)
-    
+
     # Get valid lines for current language
-    from ..i18n import get_line_display_name
+    from kharkiv_metro_core import get_line_display_name
+
     valid_lines = [
         get_line_display_name("kholodnohirsko_zavodska", lang),
         get_line_display_name("saltivska", lang),
         get_line_display_name("oleksiivska", lang),
     ]
-    
+
     msg = await message.answer(
         get_text("from_station_prompt", lang),
         reply_markup=get_lines_keyboard(lang),
@@ -63,7 +70,7 @@ async def process_from_line(message: types.Message, state: FSMContext, lang: Lan
     """Process line selection for 'from' station."""
     # Convert display name directly to internal using combined mapping
     selected_line = LINE_DISPLAY_TO_INTERNAL.get(message.text)
-    
+
     if not selected_line:
         await message.answer(
             get_text("error_unknown_line", lang),
@@ -76,13 +83,13 @@ async def process_from_line(message: types.Message, state: FSMContext, lang: Lan
 
     router = get_router()
     stations = get_stations_by_line(router, selected_line, lang)
-    
+
     # Store valid stations for next step
     await state.update_data(valid_stations=stations)
 
     data = await state.get_data()
     active_msg_id = data.get("active_message_id")
-    
+
     if active_msg_id:
         try:
             await message.bot.edit_message_text(
@@ -126,21 +133,21 @@ async def process_from_station(message: types.Message, state: FSMContext, lang: 
     # Validate station selection
     data = await state.get_data()
     valid_stations: list[str] = data.get("valid_stations", [])
-    
+
     if message.text not in valid_stations:
         await message.answer(
             get_text("error_unknown_choice", lang),
             reply_markup=get_stations_keyboard(valid_stations, lang),
         )
         return
-    
+
     await state.update_data(from_station=message.text)
     await state.set_state(RouteStates.waiting_for_to_line)
-    
+
     # Re-use valid_lines from before (lines are same)
     valid_lines = data.get("valid_lines", [])
     active_msg_id = data.get("active_message_id")
-    
+
     if active_msg_id:
         try:
             await message.bot.edit_message_text(
@@ -166,14 +173,14 @@ async def process_from_station(message: types.Message, state: FSMContext, lang: 
 async def back_from_station(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Go back from from_station - return to from_line selection."""
     await state.set_state(RouteStates.waiting_for_from_line)
-    
+
     data = await state.get_data()
     from_line = data.get("from_line")
     active_msg_id = data.get("active_message_id")
-    
+
     router = get_router()
     stations = get_stations_by_line(router, from_line, lang)
-    
+
     if active_msg_id:
         try:
             await message.bot.edit_message_text(
@@ -210,7 +217,7 @@ async def process_to_line(message: types.Message, state: FSMContext, lang: Langu
     # Get valid lines from state
     data = await state.get_data()
     valid_lines: list[str] = data.get("valid_lines", [])
-    
+
     if message.text not in valid_lines:
         await message.answer(
             get_text("error_unknown_line", lang),
@@ -237,7 +244,7 @@ async def process_to_line(message: types.Message, state: FSMContext, lang: Langu
 
     router = get_router()
     stations = get_stations_by_line_except(router, selected_line, from_station, lang)
-    
+
     # Store valid stations for next step
     await state.update_data(valid_stations=stations)
 
@@ -309,10 +316,10 @@ async def process_to_station(message: types.Message, state: FSMContext, lang: La
     """Process to station and ask for time choice."""
     await state.update_data(to_station=message.text)
     await state.set_state(RouteStates.waiting_for_time_choice)
-    
+
     data = await state.get_data()
     active_msg_id = data.get("active_message_id")
-    
+
     if active_msg_id:
         try:
             await message.bot.edit_message_text(
@@ -338,7 +345,7 @@ async def process_to_station(message: types.Message, state: FSMContext, lang: La
 async def back_to_station(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Go back from to_station - return to to_line selection."""
     await state.set_state(RouteStates.waiting_for_to_line)
-    
+
     data = await state.get_data()
     to_line = data.get("to_line", "Холодногірсько-заводська" if lang == "ua" else "Kholodnohirsko-Zavodska")
     from_station = data.get("from_station", "")
@@ -396,13 +403,13 @@ async def process_time_choice(message: types.Message, state: FSMContext, lang: L
         await state.set_state(RouteStates.waiting_for_day_type)
         data = await state.get_data()
         active_msg_id = data.get("active_message_id")
-        
+
         # Store valid day types for validation
         valid_day_types = [
             get_text("weekdays", lang),
             get_text("weekends", lang),
         ]
-        
+
         if active_msg_id:
             try:
                 await message.bot.edit_message_text(
@@ -479,22 +486,22 @@ async def process_day_type_route(message: types.Message, state: FSMContext, lang
     # Get valid day types from state
     data = await state.get_data()
     valid_day_types: list[str] = data.get("valid_day_types", [])
-    
+
     if message.text not in valid_day_types:
         await message.answer(
             get_text("error_unknown_choice", lang),
             reply_markup=get_day_type_keyboard(lang),
         )
         return
-    
+
     selected_day = DAY_TYPE_DISPLAY_TO_INTERNAL.get(message.text)
 
     await state.update_data(day_type=selected_day)
     await state.set_state(RouteStates.waiting_for_custom_time)
-    
+
     data = await state.get_data()
     active_msg_id = data.get("active_message_id")
-    
+
     if active_msg_id:
         try:
             # Remove keyboard for custom time input
@@ -513,10 +520,10 @@ async def process_day_type_route(message: types.Message, state: FSMContext, lang
 async def back_from_day_type_route(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Go back from day_type - return to time_choice selection."""
     await state.set_state(RouteStates.waiting_for_time_choice)
-    
+
     data = await state.get_data()
     active_msg_id = data.get("active_message_id")
-    
+
     if active_msg_id:
         try:
             await message.bot.edit_message_text(
@@ -596,10 +603,10 @@ async def process_custom_time(message: types.Message, state: FSMContext, lang: L
 async def back_from_custom_time(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Go back from custom_time - return to day_type selection."""
     await state.set_state(RouteStates.waiting_for_day_type)
-    
+
     data = await state.get_data()
     active_msg_id = data.get("active_message_id")
-    
+
     if active_msg_id:
         try:
             await message.bot.edit_message_text(
@@ -821,7 +828,9 @@ async def process_reminder(callback: types.CallbackQuery, lang: Language = "ua")
             # Get the last station of this line group (where user needs to exit)
             last_station = segments[-1].to_station
             name_attr = "name_ua" if lang == "ua" else "name_en"
-            await callback.message.answer(get_text("reminder_exit_prepare", lang, station=getattr(last_station, name_attr)))
+            await callback.message.answer(
+                get_text("reminder_exit_prepare", lang, station=getattr(last_station, name_attr))
+            )
 
 
 async def cancel_reminder(callback: types.CallbackQuery, lang: Language = "ua"):
@@ -894,15 +903,23 @@ def register_route_handlers(dp: Dispatcher):
     # Time choice state handlers
     dp.message.register(back_from_time_choice, RouteStates.waiting_for_time_choice, F.text == get_text("back", "ua"))
     dp.message.register(back_from_time_choice, RouteStates.waiting_for_time_choice, F.text == get_text("back", "en"))
-    dp.message.register(cancel_from_time_choice, RouteStates.waiting_for_time_choice, F.text == get_text("cancel", "ua"))
-    dp.message.register(cancel_from_time_choice, RouteStates.waiting_for_time_choice, F.text == get_text("cancel", "en"))
+    dp.message.register(
+        cancel_from_time_choice, RouteStates.waiting_for_time_choice, F.text == get_text("cancel", "ua")
+    )
+    dp.message.register(
+        cancel_from_time_choice, RouteStates.waiting_for_time_choice, F.text == get_text("cancel", "en")
+    )
     dp.message.register(process_time_choice, RouteStates.waiting_for_time_choice)
 
     # Day type state handlers
     dp.message.register(back_from_day_type_route, RouteStates.waiting_for_day_type, F.text == get_text("back", "ua"))
     dp.message.register(back_from_day_type_route, RouteStates.waiting_for_day_type, F.text == get_text("back", "en"))
-    dp.message.register(cancel_from_day_type_route, RouteStates.waiting_for_day_type, F.text == get_text("cancel", "ua"))
-    dp.message.register(cancel_from_day_type_route, RouteStates.waiting_for_day_type, F.text == get_text("cancel", "en"))
+    dp.message.register(
+        cancel_from_day_type_route, RouteStates.waiting_for_day_type, F.text == get_text("cancel", "ua")
+    )
+    dp.message.register(
+        cancel_from_day_type_route, RouteStates.waiting_for_day_type, F.text == get_text("cancel", "en")
+    )
     dp.message.register(process_day_type_route, RouteStates.waiting_for_day_type)
 
     # Custom time state handlers

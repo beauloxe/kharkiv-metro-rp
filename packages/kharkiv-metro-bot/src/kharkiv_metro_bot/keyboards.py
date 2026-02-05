@@ -6,11 +6,9 @@ from aiogram.types import (
     KeyboardButton,
     ReplyKeyboardMarkup,
 )
-from kharkiv_metro_core import MetroRouter
+from kharkiv_metro_core import Language, MetroRouter, get_line_display_name, get_text
 
 from .constants import LINE_ORDER
-from .i18n import Language, get_text, get_line_display_name
-
 
 # Navigation button texts
 NAV_BACK_TEXT = "back"
@@ -81,11 +79,11 @@ def get_stations_keyboard(
 
 def _get_station_internal_name(router: MetroRouter, display_name: str) -> str | None:
     """Get internal (Ukrainian) station name from display name.
-    
+
     Args:
         router: MetroRouter instance
         display_name: Station name in any language
-        
+
     Returns:
         Internal Ukrainian name or None if not found
     """
@@ -105,7 +103,7 @@ def get_stations_keyboard_by_line(
     exclude_internal = None
     if exclude_station:
         exclude_internal = _get_station_internal_name(router, exclude_station)
-    
+
     # Group stations by line using internal names as keys
     lines_stations: dict[str, list[str]] = {line: [] for line in LINE_ORDER}
 

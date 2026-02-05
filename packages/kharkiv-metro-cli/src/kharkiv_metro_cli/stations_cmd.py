@@ -7,6 +7,7 @@ import json
 import click
 from click.exceptions import Exit
 from kharkiv_metro_core import Config, Line
+from kharkiv_metro_core import get_text as tr
 from rich.table import Table
 
 from .utils import console, ensure_db
@@ -79,15 +80,3 @@ def _output_table(stations_data: list, name_attr: str, lang: str) -> None:
         table.add_row(line_name, s[name_attr])
 
     console.print(table)
-
-
-# Translations
-I18N = {
-    "ua": {"Line": "Лінія", "Station": "Станція"},
-    "en": {"Line": "Line", "Station": "Station"},
-}
-
-
-def tr(key: str, lang: str = "ua") -> str:
-    """Get translation."""
-    return I18N.get(lang, I18N["ua"]).get(key, key)

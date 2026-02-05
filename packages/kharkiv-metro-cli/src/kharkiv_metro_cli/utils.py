@@ -17,47 +17,23 @@ if TYPE_CHECKING:
 console = Console()
 
 
-# Translations
-I18N = {
-    "ua": {
-        "From": "Звідки",
-        "To": "Куди",
-        "Line": "Лінія",
-        "Time": "Час",
-        "Transfer": "Пересадка",
-        "min": "хв",
-        "Hour": "Година",
-        "Operating hours": "Години роботи",
-        "CLOSED": "ЗАКРИТО",
-    },
-    "en": {
-        "From": "From",
-        "To": "To",
-        "Line": "Line",
-        "Time": "Time",
-        "Transfer": "Transfer",
-        "min": "min",
-        "Hour": "Hour",
-        "Operating hours": "Operating hours",
-        "CLOSED": "CLOSED",
-    },
-}
-
-
 def _(key: str, lang: str = "ua") -> str:
-    """Get translation."""
-    return I18N.get(lang, I18N["ua"]).get(key, key)
+    """Get translation from core i18n."""
+    from kharkiv_metro_core import get_text
+
+    return get_text(key, lang)
 
 
 def format_transfers(count: int, lang: str = "ua") -> str:
     """Format transfer count."""
+    from kharkiv_metro_core import get_text
+
     if count == 0:
-        return _("no transfers", lang) if lang == "ua" else "no transfers"
-    if lang == "ua":
-        if count == 1:
-            return f"{count} пересадка"
-        return f"{count} пересадки"
-    return f"{count} transfer" if count == 1 else f"{count} transfers"
+        return get_text("no_transfers", lang)
+    # Get pluralized form from core translations
+    key = f"transfers_{'one' if count == 1 else 'many'}"
+    text = get_text(key, lang)
+    return text.format(count=count)
 
 
 def get_db_path(ctx: click.Context) -> str:

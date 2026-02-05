@@ -7,9 +7,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from kharkiv_metro_core import Config
-
-from .i18n import DEFAULT_LANGUAGE, Language
+from kharkiv_metro_core import DEFAULT_LANGUAGE, Config, Language
 
 # Get config instance
 _config = Config()
@@ -153,10 +151,7 @@ class AnalyticsDatabase:
 
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                "SELECT language FROM users WHERE user_hash = ?",
-                (user_hash,)
-            )
+            cursor.execute("SELECT language FROM users WHERE user_hash = ?", (user_hash,))
             row = cursor.fetchone()
             if row and row["language"]:
                 return row["language"]

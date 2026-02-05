@@ -1,9 +1,10 @@
 """Middleware for handling user language."""
 
 from aiogram import BaseMiddleware
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery, Message
+from kharkiv_metro_core import DEFAULT_LANGUAGE, Language
+from kharkiv_metro_core import get_text as _get_text
 
-from ..i18n import DEFAULT_LANGUAGE, Language, get_text as _get_text
 from ..analytics import get_user_language
 
 
@@ -34,7 +35,7 @@ class I18nMiddleware(BaseMiddleware):
 
 def get_text(key: str, lang: Language, **kwargs) -> str:
     """Get translated text.
-    
+
     This is a convenience function that wraps i18n.get_text
     to be used with the lang parameter from middleware.
     """

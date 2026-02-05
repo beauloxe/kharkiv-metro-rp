@@ -163,6 +163,11 @@ metro stations -l s # "k", "o"
 - **macOS**: `~/Library/Application Support/kharkiv-metro-rp/metro.db`
 - **Windows**: `%LOCALAPPDATA%\kharkiv-metro-rp\metro.db`
 
+База аналітики (для збереження між редеплоями використовуйте `ANALYTICS_DB_PATH`):
+- **Linux**: `~/.local/share/kharkiv-metro-rp/analytics.db`
+- **macOS**: `~/Library/Application Support/kharkiv-metro-rp/analytics.db`
+- **Windows**: `%LOCALAPPDATA%\kharkiv-metro-rp\analytics.db`
+
 ### config.toml - повна специфікація
 
 #### `[database]` - налаштування бази даних
@@ -229,6 +234,15 @@ metro --db-path /tmp/test.db route "Холодна гора" "Студентсь
 metro --config ./my-config.toml route "Холодна гора" "Студентська"
 ```
 
+### Змінні оточення
+
+| Змінна | Опис | Приклад |
+|--------|------|---------|
+| `DB_PATH` | Шлях до основної бази даних метро | `/app/data/metro.db` |
+| `ANALYTICS_DB_PATH` | Шлях до бази аналітики (для persistent зберігання між редеплоями) | `/app/data/analytics.db` |
+| `BOT_TOKEN` | Токен Telegram бота | `123456:ABC-DEF...` |
+| `TZ` | Часовий пояс | `Europe/Kyiv` |
+
 ## Telegram-бот
 
 Інтерактивний Telegram бот для пошуку маршрутів з нагадуваннями про станції.
@@ -238,8 +252,9 @@ metro --config ./my-config.toml route "Холодна гора" "Студент�
 ```bash
 # Встановіть змінні оточення
 export BOT_TOKEN="your_bot_token_here"
-export DB_PATH="/path/to/metro.db"  # Опціонально, за замовчуванням XDG
-export TZ="Europe/Kyiv"             # Опціонально, часовий пояс
+export DB_PATH="/path/to/metro.db"              # Опціонально, за замовчуванням XDG
+export ANALYTICS_DB_PATH="/path/to/analytics.db"  # Опціонально, для persistent зберігання
+export TZ="Europe/Kyiv"                         # Опціонально, часовий пояс
 
 # Запуск
 uv run python -m kharkiv_metro_rp.bot.main
@@ -272,6 +287,7 @@ uv run python -m kharkiv_metro_rp.bot.main
 - `BOT_TOKEN` — токен бота від @BotFather
 - `DB_PATH` — шлях до бази даних (наприклад, `/app/data/metro.db`)
 - `TZ` — часовий пояс (`Europe/Kyiv`)
+- `ANALYTICS_DB_PATH` — шлях до бази аналітики (для persistent зберігання, наприклад, `/app/data/analytics.db`)
 
 ## MCP Server
 

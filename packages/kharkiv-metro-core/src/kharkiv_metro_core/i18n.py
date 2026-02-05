@@ -1,4 +1,4 @@
-"""Internationalization module for the Telegram bot."""
+"""Internationalization module for Kharkiv Metro."""
 
 from typing import Literal
 
@@ -9,6 +9,20 @@ DEFAULT_LANGUAGE: Language = "ua"
 # Translation dictionary
 TRANSLATIONS: dict[Language, dict[str, str]] = {
     "ua": {
+        # CLI specific
+        "From": "Звідки",
+        "To": "Куди",
+        "Line": "Лінія",
+        "Time": "Час",
+        "Transfer": "Пересадка",
+        "min": "хв",
+        "Hour": "Година",
+        "Operating hours": "Години роботи",
+        "CLOSED": "ЗАКРИТО",
+        "Station": "Станція",
+        "no_transfers": "без пересадок",
+        "transfers_one": "{count} пересадка",
+        "transfers_many": "{count} пересадки",
         # Main menu
         "main_menu": "🏠 Головне меню",
         "route": "🚇 Маршрут",
@@ -16,12 +30,10 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "stations": "📋 Станції",
         "language": "🌐 Мова",
         "about": "ℹ️ Про бота",
-        
         # Navigation
         "back": "🔙 Назад",
         "cancel": "❌ Скасувати",
         "next": "Далі ▶️",
-        
         # Route building
         "from_station_prompt": "📍 Звідки їдемо? Спочатку оберіть лінію:",
         "to_station_prompt": "📍 Куди їдемо? Спочатку оберіть лінію:",
@@ -29,7 +41,6 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "time_prompt": "⏰ Який час?",
         "day_type_prompt": "📅 Оберіть тип дня:",
         "custom_time_prompt": "⌚ Введіть час у форматі ГГ:ХХ (наприклад: 14:30)",
-        
         # Time options
         "current_time": "🕐 Поточний час",
         "custom_time": "⌚ Свій час",
@@ -37,13 +48,11 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "time_minus_10": "◀ -10 хв",
         "time_plus_10": "▶ +10 хв",
         "time_plus_20": "⏩ +20 хв",
-        
         # Day types
         "weekdays": "📅 Будні",
         "weekends": "🎉 Вихідні",
-        "weekday": "будній",
-        "weekend": "вихідний",
-        
+        "weekday": "Будній",
+        "weekend": "Вихідний",
         # Errors
         "error_unknown_line": "❌ Невідома лінія. Оберіть з клавіатури.",
         "error_unknown_choice": "❌ Невідомий вибір. Оберіть з клавіатури.",
@@ -54,20 +63,17 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "error_metro_closed": "❌ Метро закрите та/або на останній потяг неможливо встигнути\nСпробуйте інший час або день.",
         "error_generic": "❌ Помилка: {error}\nСпробуйте ще раз через /route",
         "error_cancelled": "❌ Побудову маршруту скасовано",
-        
         # Reminders
         "reminder_set": "✅ Нагадування встановлено!",
         "reminder_cancelled": "❌ Нагадування скасовано!",
         "reminder_exit_prepare": "⏰ Готуйтесь виходити на наступній станції: {station}",
         "reminder_button": "⏰ Вихід на {station}",
         "reminder_cancel_button": "❌ Скасувати нагадування на {time}",
-        
         # Outdated
         "outdated_button": "❌ Ця кнопка застаріла. Будь ласка, побудуйте маршрут знову.",
         "error_invalid_data": "❌ Помилка: неправильний формат даних",
         "error_route_expired": "❌ Помилка: маршрут не знайдено або застарів",
         "error_invalid_line": "❌ Помилка: неправильний індекс лінії",
-        
         # Commands
         "cmd_start": "Запустити бота",
         "cmd_route": "Побудувати маршрут",
@@ -75,7 +81,6 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "cmd_stations": "Список станцій",
         "cmd_about": "Про бота",
         "cmd_language": "Змінити мову",
-        
         # Lines (for display)
         "line_red": "🔴 Холодногірсько-Заводська",
         "line_blue": "🔵 Салтівська",
@@ -83,11 +88,9 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "line_red_short": "Холодногірсько-заводська",
         "line_blue_short": "Салтівська",
         "line_green_short": "Олексіївська",
-        
         # Language selection
         "select_language": "🌐 Оберіть мову / Select language:",
         "language_set": "✅ Мову змінено на Українську",
-        
         # Common / Menu
         "start_message": "🚇 Бот для планування маршрутів Харківського метро\n\nОберіть дію:",
         "about_message": (
@@ -99,23 +102,34 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
             "Джерело даних: https://www.metro.kharkiv.ua/hkrafiky-krukhu-poizdiv/\n\n"
             "⚠️ Цей проєкт не пов'язаний з КП «Харківський метрополітен» і не надає жодних гарантій. "
             "Користуючись цим проєктом, Ви несете відповідальність за планування маршруту."
-            "\n\nБільше інформації та код проєкту <a href=\"https://github.com/beauloxe/kharkiv-metro-rp\">за посиланням</a>."
+            '\n\nБільше інформації та код проєкту <a href="https://github.com/beauloxe/kharkiv-metro-rp">за посиланням</a>.'
         ),
         "select_line": "📅 Оберіть лінію метро:",
         "session_restored": "🤖 Сеанс відновлено\n\nСхоже, сесія закінчилась.\nПовертаємось до головного меню:",
-        
         # Schedule
         "schedule_not_found": "❌ Розклад не знайдено",
         "schedule_cancelled": "❌ Перегляд розкладу скасовано",
         "direction": "Напрямок",
-        
         # Stations
         "stations_cancelled": "❌ Перегляд станцій скасовано",
-        
         # Navigation hint
         "navigation_hint": "👇 Оберіть варіант нижче або натисніть кнопку:",
     },
     "en": {
+        # CLI specific
+        "From": "From",
+        "To": "To",
+        "Line": "Line",
+        "Time": "Time",
+        "Transfer": "Transfer",
+        "min": "min",
+        "Hour": "Hour",
+        "Operating hours": "Operating hours",
+        "CLOSED": "CLOSED",
+        "Station": "Station",
+        "no_transfers": "no transfers",
+        "transfers_one": "{count} transfer",
+        "transfers_many": "{count} transfers",
         # Main menu
         "main_menu": "🏠 Main menu",
         "route": "🚇 Route",
@@ -123,12 +137,10 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "stations": "📋 Stations",
         "language": "🌐 Language",
         "about": "ℹ️ About",
-        
         # Navigation
         "back": "🔙 Back",
         "cancel": "❌ Cancel",
         "next": "Next ▶️",
-        
         # Route building
         "from_station_prompt": "📍 Where are you traveling from? First, select a line:",
         "to_station_prompt": "📍 Where are you going to? First, select a line:",
@@ -136,7 +148,6 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "time_prompt": "⏰ What time?",
         "day_type_prompt": "📅 Select day type:",
         "custom_time_prompt": "⌚ Enter time in HH:MM format (e.g., 14:30)",
-        
         # Time options
         "current_time": "🕐 Current time",
         "custom_time": "⌚ Custom time",
@@ -144,13 +155,11 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "time_minus_10": "◀ -10 min",
         "time_plus_10": "▶ +10 min",
         "time_plus_20": "⏩ +20 min",
-        
         # Day types
         "weekdays": "📅 Weekdays",
         "weekends": "🎉 Weekends",
-        "weekday": "weekday",
-        "weekend": "weekend",
-        
+        "weekday": "Weekday",
+        "weekend": "Weekend",
         # Errors
         "error_unknown_line": "❌ Unknown line. Please select from the keyboard.",
         "error_unknown_choice": "❌ Unknown choice. Please select from the keyboard.",
@@ -161,20 +170,17 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "error_metro_closed": "❌ Metro is closed and/or you cannot catch the last train\nPlease try another time or day.",
         "error_generic": "❌ Error: {error}\nPlease try again via /route",
         "error_cancelled": "❌ Route planning cancelled",
-        
         # Reminders
         "reminder_set": "✅ Reminder set!",
         "reminder_cancelled": "❌ Reminder cancelled!",
         "reminder_exit_prepare": "⏰ Get ready to exit at the next station: {station}",
         "reminder_button": "⏰ Exit at {station}",
         "reminder_cancel_button": "❌ Cancel reminder at {time}",
-        
         # Outdated
         "outdated_button": "❌ This button is outdated. Please rebuild your route.",
         "error_invalid_data": "❌ Error: invalid data format",
         "error_route_expired": "❌ Error: route not found or expired",
         "error_invalid_line": "❌ Error: invalid line index",
-        
         # Commands
         "cmd_start": "Start the bot",
         "cmd_route": "Build a route",
@@ -182,7 +188,6 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "cmd_stations": "List of stations",
         "cmd_about": "About the bot",
         "cmd_language": "Change language",
-        
         # Lines (for display)
         "line_red": "🔴 Kholodnohirsko-Zavodska",
         "line_blue": "🔵 Saltivska",
@@ -190,11 +195,9 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "line_red_short": "Kholodnohirsko-Zavodska",
         "line_blue_short": "Saltivska",
         "line_green_short": "Oleksiivska",
-        
         # Language selection
         "select_language": "🌐 Select language / Оберіть мову:",
         "language_set": "✅ Language changed to English",
-        
         # Common / Menu
         "start_message": "🚇 Kharkiv Metro Route Planner Bot\n\nChoose an action:",
         "about_message": (
@@ -205,20 +208,17 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
             "• Station schedules for weekdays and weekends\n"
             "Data source: https://www.metro.kharkiv.ua/hkrafiky-krukhu-poizdiv/\n\n"
             "⚠️ This project is not affiliated with KP «Kharkiv Metro» and provides no guarantees. "
-            "By using this project, you are responsible for route planning."
-            "\n\nMore information and project code <a href=\"https://github.com/beauloxe/kharkiv-metro-rp\">at this link</a>."
+            "By using this project, you are responsible for route planning.\n\n"
+            'More information and project code <a href="https://github.com/beauloxe/kharkiv-metro-rp">at this link</a>.'
         ),
         "select_line": "📅 Select a metro line:",
         "session_restored": "🤖 Session restored\n\nLooks like the session has expired.\nReturning to main menu:",
-        
         # Schedule
         "schedule_not_found": "❌ Schedule not found",
         "schedule_cancelled": "❌ Schedule lookup cancelled",
         "direction": "Direction",
-        
         # Stations
         "stations_cancelled": "❌ Stations lookup cancelled",
-        
         # Navigation hint
         "navigation_hint": "👇 Select an option below or press a button:",
     },
@@ -227,12 +227,12 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
 
 def get_text(key: str, lang: Language = DEFAULT_LANGUAGE, **kwargs) -> str:
     """Get translated text by key.
-    
+
     Args:
         key: Translation key
         lang: Language code ('ua' or 'en')
         **kwargs: Format string arguments
-        
+
     Returns:
         Translated text
     """
@@ -247,11 +247,11 @@ def get_text(key: str, lang: Language = DEFAULT_LANGUAGE, **kwargs) -> str:
 
 def get_line_display_name(line_key: str, lang: Language = DEFAULT_LANGUAGE) -> str:
     """Get display name for a line.
-    
+
     Args:
         line_key: Internal line key (e.g., 'kholodnohirsko_zavodska')
         lang: Language code
-        
+
     Returns:
         Display name with emoji
     """
@@ -265,11 +265,11 @@ def get_line_display_name(line_key: str, lang: Language = DEFAULT_LANGUAGE) -> s
 
 def get_line_short_name(line_key: str, lang: Language = DEFAULT_LANGUAGE) -> str:
     """Get short name for a line (without emoji).
-    
+
     Args:
         line_key: Internal line key
         lang: Language code
-        
+
     Returns:
         Short display name
     """
@@ -283,11 +283,11 @@ def get_line_short_name(line_key: str, lang: Language = DEFAULT_LANGUAGE) -> str
 
 def get_line_display_by_internal(internal_name: str, lang: Language = DEFAULT_LANGUAGE) -> str:
     """Get display name for a line by its internal (Ukrainian) name.
-    
+
     Args:
         internal_name: Internal line name (e.g., 'Холодногірсько-заводська')
         lang: Language code
-        
+
     Returns:
         Display name with emoji (e.g., '🔴 Kholodnohirsko-Zavodska')
     """
@@ -322,11 +322,11 @@ LINE_DISPLAY_TO_INTERNAL: dict[str, str] = {
 
 def parse_line_display_name(display_name: str, lang: Language = DEFAULT_LANGUAGE) -> str | None:
     """Parse display line name to internal name.
-    
+
     Args:
         display_name: Display name with emoji (e.g., "🔴 Холодногірсько-Заводська")
         lang: Language code
-        
+
     Returns:
         Internal line name or None if not found
     """
@@ -354,11 +354,11 @@ DAY_TYPE_DISPLAY_TO_INTERNAL: dict[str, str] = {
 
 def parse_day_type_display(display_name: str, lang: Language = DEFAULT_LANGUAGE) -> str | None:
     """Parse display day type to internal value.
-    
+
     Args:
         display_name: Display day type (e.g., "📅 Будні")
         lang: Language code
-        
+
     Returns:
         Internal day type ("weekday" or "weekend") or None
     """

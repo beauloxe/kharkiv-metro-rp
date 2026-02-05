@@ -18,7 +18,20 @@ from .models import (
     create_stations,
 )
 from .router import MetroRouter
-from .scraper import MetroScraper
+
+# Lazy import for MetroScraper to avoid loading aiohttp/bs4 on startup
+# These are heavy dependencies only needed for scraping operations
+_MetroScraper = None
+
+def __getattr__(name):
+    """Lazy load MetroScraper to avoid importing heavy dependencies on startup."""
+    global _MetroScraper
+    if name == "MetroScraper":
+        if _MetroScraper is None:
+            from .scraper import MetroScraper as _MS
+            _MetroScraper = _MS
+        return _MetroScraper
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
     # Config
@@ -42,7 +55,7 @@ __all__ = [
     "MetroDatabase",
     # Router
     "MetroRouter",
-    # Scraper
+    # Scraper (lazy loaded)
     "MetroScraper",
     # Initializer
     "init_database",

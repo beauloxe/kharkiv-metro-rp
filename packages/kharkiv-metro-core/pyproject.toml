@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Core library for Kharkiv Metro Route Planner"
 requires-python = ">=3.11"
 dependencies = [
+    "aiohttp>=3.9.0",
     "beautifulsoup4>=4.12.0",
     "requests>=2.31.0",
     "toml>=0.10.2",

@@ -118,6 +118,9 @@ class MetroRouter:
         if not is_open:
             raise MetroClosedError()
 
+        # Precompute terminal stations for all lines to avoid repeated calculations
+        line_terminals = self._get_line_terminals()
+
         segments: list[RouteSegment] = []
         num_transfers = 0
 
@@ -125,12 +128,17 @@ class MetroRouter:
         current_line: Line | None = None
         direction: str | None = None
 
+        # Local variables for faster access (Pattern 9)
+        stations = self.stations
+        db = self.db
+        timedelta_minutes = timedelta
+
         for i in range(len(path) - 1):
             from_id = path[i]
             to_id = path[i + 1]
 
-            from_station = self.stations[from_id]
-            to_station = self.stations[to_id]
+            from_station = stations[from_id]
+            to_station = stations[to_id]
 
             # Check if this is a transfer
             is_transfer = from_station.transfer_to == to_id
@@ -138,18 +146,18 @@ class MetroRouter:
             if is_transfer:
                 # Transfer segment
                 duration = 3
+                arrival = current_time + timedelta_minutes(minutes=duration)
                 segment = RouteSegment(
                     from_station=from_station,
                     to_station=to_station,
                     departure_time=current_time,
-                    arrival_time=current_time + timedelta(minutes=duration),
+                    arrival_time=arrival,
                     is_transfer=True,
                     duration_minutes=duration,
                 )
                 num_transfers += 1
                 segments.append(segment)
-                if segment.arrival_time is not None:
-                    current_time = segment.arrival_time
+                current_time = arrival
                 current_line = None  # Reset line after transfer
                 direction = None  # Reset direction after transfer
 
@@ -158,11 +166,11 @@ class MetroRouter:
                 # Ensure direction is set
                 if current_line is None or from_station.line != current_line:
                     current_line = from_station.line
-                    direction = self._find_terminal_in_path(path, i, current_line)
+                    direction = self._find_terminal_in_path_fast(path, i, current_line, line_terminals)
 
                     # Get exact departure time from schedule at the start of line
                     current_time_only = dt.time(current_time.hour, current_time.minute)
-                    next_departures = self.db.get_next_departures(
+                    next_departures = db.get_next_departures(
                         from_id,
                         direction,
                         day_type,
@@ -174,7 +182,7 @@ class MetroRouter:
                         departure = next_departures[0]
                         departure_dt = datetime.combine(current_time.date(), departure.time, current_time.tzinfo)
                         if departure_dt < current_time:
-                            departure_dt += timedelta(days=1)
+                            departure_dt += timedelta_minutes(days=1)
                         current_time = departure_dt
                     else:
                         # No departures available - metro is closed
@@ -191,7 +199,7 @@ class MetroRouter:
                 else:
                     # Fallback to default 2 minutes if no schedule found
                     travel_time = 2
-                    arrival_time = current_time + timedelta(minutes=travel_time)
+                    arrival_time = current_time + timedelta_minutes(minutes=travel_time)
 
                 segment = RouteSegment(
                     from_station=from_station,
@@ -254,26 +262,54 @@ class MetroRouter:
 
         return None
 
-    def _find_terminal_in_path(self, path: list[str], start_idx: int, line: Line) -> str:
-        """Find terminal station in path for given line starting from index."""
-        # Find all stations on this line in the path
-        line_stations = []
-        for i in range(start_idx, len(path)):
-            if self.stations[path[i]].line == line:
-                line_stations.append(path[i])
+    def _get_line_terminals(self) -> dict[Line, tuple[str, str]]:
+        """Precompute terminal stations for all lines.
+
+        Returns dict mapping line to (first_terminal_id, last_terminal_id).
+        """
+        terminals: dict[Line, tuple[str, str]] = {}
+
+        for line in [Line.KHOLODNOHIRSKO_ZAVODSKA, Line.SALTIVSKA, Line.OLEKSIIVSKA]:
+            line_stations = [(sid, s.order) for sid, s in self.stations.items() if s.line == line]
+            if line_stations:
+                min_order = min(order for _, order in line_stations)
+                max_order = max(order for _, order in line_stations)
+                first_terminal = next(sid for sid, order in line_stations if order == min_order)
+                last_terminal = next(sid for sid, order in line_stations if order == max_order)
+                terminals[line] = (first_terminal, last_terminal)
+
+        return terminals
+
+    def _find_terminal_in_path_fast(
+        self,
+        path: list[str],
+        start_idx: int,
+        line: Line,
+        line_terminals: dict[Line, tuple[str, str]],
+    ) -> str:
+        """Find terminal station in path for given line starting from index.
+
+        Uses precomputed terminals for better performance.
+        """
+        # Local variables for faster access (Pattern 9)
+        stations = self.stations
+        path_len = len(path)
+
+        # Find first and last station on this line in the path
+        first_station_idx = start_idx
+        last_station_idx = start_idx
+
+        for i in range(start_idx, path_len):
+            if stations[path[i]].line == line:
+                last_station_idx = i
             else:
                 break
 
-        if len(line_stations) >= 2:
-            first_order = self.stations[line_stations[0]].order
-            last_order = self.stations[line_stations[-1]].order
+        if last_station_idx > first_station_idx:
+            first_order = stations[path[first_station_idx]].order
+            last_order = stations[path[last_station_idx]].order
 
-            # Find terminal stations for this line (first and last on the line)
-            line_stations_all = [sid for sid, station in self.stations.items() if station.line == line]
-            min_order = min(self.stations[sid].order for sid in line_stations_all)
-            max_order = max(self.stations[sid].order for sid in line_stations_all)
-            first_terminal = next(sid for sid in line_stations_all if self.stations[sid].order == min_order)
-            last_terminal = next(sid for sid in line_stations_all if self.stations[sid].order == max_order)
+            first_terminal, last_terminal = line_terminals.get(line, (path[start_idx], path[start_idx]))
 
             if last_order > first_order:
                 return last_terminal  # Going forward - return last terminal
@@ -281,6 +317,12 @@ class MetroRouter:
                 return first_terminal  # Going backward - return first terminal
 
         return path[start_idx]
+
+    def _find_terminal_in_path(self, path: list[str], start_idx: int, line: Line) -> str:
+        """Find terminal station in path for given line starting from index."""
+        # Delegate to optimized version with cached terminals
+        line_terminals = self._get_line_terminals()
+        return self._find_terminal_in_path_fast(path, start_idx, line, line_terminals)
 
     def _get_day_type(self, dt: datetime) -> DayType:
         """Determine if date is weekday or weekend."""

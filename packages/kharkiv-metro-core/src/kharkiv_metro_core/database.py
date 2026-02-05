@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import sqlite3
+from collections import defaultdict
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -68,17 +69,21 @@ class MetroDatabase:
             conn.commit()
 
     def save_stations(self, stations: list[dict]) -> None:
-        """Save stations to database."""
+        """Save stations to database using batch insert."""
+        if not stations:
+            return
+
         with self._get_connection() as conn:
             cursor = conn.cursor()
 
-            for station in stations:
-                cursor.execute(
-                    """
-                    INSERT OR REPLACE INTO stations
-                    (id, name_ua, name_en, line, station_order, transfer_to)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """,
+            # Batch insert for better performance (Pattern 16)
+            cursor.executemany(
+                """
+                INSERT OR REPLACE INTO stations
+                (id, name_ua, name_en, line, station_order, transfer_to)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """,
+                [
                     (
                         station["id"],
                         station["name_ua"],
@@ -86,8 +91,10 @@ class MetroDatabase:
                         station["line"],
                         station["order"],
                         station.get("transfer_to"),
-                    ),
-                )
+                    )
+                    for station in stations
+                ],
+            )
 
             conn.commit()
 
@@ -109,32 +116,74 @@ class MetroDatabase:
                 ),
             )
 
-            # Insert new entries
-            for entry in schedule.entries:
-                cursor.execute(
+            # Batch insert for better performance (Pattern 16)
+            if schedule.entries:
+                cursor.executemany(
                     """
                     INSERT INTO schedules
                     (station_id, direction_station_id, day_type, hour, minutes)
                     VALUES (?, ?, ?, ?, ?)
                 """,
-                    (
-                        schedule.station_id,
-                        schedule.direction_station_id,
-                        schedule.day_type.value,
-                        entry.hour,
-                        entry.minutes,
-                    ),
+                    [
+                        (
+                            schedule.station_id,
+                            schedule.direction_station_id,
+                            schedule.day_type.value,
+                            entry.hour,
+                            entry.minutes,
+                        )
+                        for entry in schedule.entries
+                    ],
                 )
 
             conn.commit()
 
     def save_schedules(self, schedules: list[StationSchedule]) -> int:
-        """Save multiple schedules to database."""
-        count = 0
-        for schedule in schedules:
-            self.save_schedule(schedule)
-            count += len(schedule.entries)
-        return count
+        """Save multiple schedules to database using single transaction."""
+        if not schedules:
+            return 0
+
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            count = 0
+
+            for schedule in schedules:
+                # Delete existing entries for this schedule
+                cursor.execute(
+                    """
+                    DELETE FROM schedules
+                    WHERE station_id = ? AND direction_station_id = ? AND day_type = ?
+                """,
+                    (
+                        schedule.station_id,
+                        schedule.direction_station_id,
+                        schedule.day_type.value,
+                    ),
+                )
+
+                # Batch insert entries
+                if schedule.entries:
+                    cursor.executemany(
+                        """
+                        INSERT INTO schedules
+                        (station_id, direction_station_id, day_type, hour, minutes)
+                        VALUES (?, ?, ?, ?, ?)
+                    """,
+                        [
+                            (
+                                schedule.station_id,
+                                schedule.direction_station_id,
+                                schedule.day_type.value,
+                                entry.hour,
+                                entry.minutes,
+                            )
+                            for entry in schedule.entries
+                        ],
+                    )
+                    count += len(schedule.entries)
+
+            conn.commit()
+            return count
 
     def get_station_schedule(
         self,
@@ -203,28 +252,38 @@ class MetroDatabase:
             return [ScheduleEntry(hour=r["hour"], minutes=r["minutes"]) for r in rows]
 
     def get_all_schedules_for_station(self, station_id: str, day_type: DayType) -> list[StationSchedule]:
-        """Get all schedules (all directions) for a station."""
+        """Get all schedules (all directions) for a station using single query."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
 
+            # Single query with all data - avoids N+1 problem (Pattern 16)
             cursor.execute(
                 """
-                SELECT DISTINCT direction_station_id
+                SELECT direction_station_id, hour, minutes
                 FROM schedules
                 WHERE station_id = ? AND day_type = ?
+                ORDER BY direction_station_id, hour, minutes
             """,
                 (station_id, day_type.value),
             )
 
-            directions = [r["direction_station_id"] for r in cursor.fetchall()]
+            # Group entries by direction
+            direction_entries: dict[str, list[ScheduleEntry]] = defaultdict(list)
 
-            schedules = []
-            for direction in directions:
-                schedule = self.get_station_schedule(station_id, direction, day_type)
-                if schedule:
-                    schedules.append(schedule)
+            for row in cursor.fetchall():
+                direction = row["direction_station_id"]
+                direction_entries[direction].append(ScheduleEntry(hour=row["hour"], minutes=row["minutes"]))
 
-            return schedules
+            # Build StationSchedule objects
+            return [
+                StationSchedule(
+                    station_id=station_id,
+                    direction_station_id=direction,
+                    day_type=day_type,
+                    entries=entries,
+                )
+                for direction, entries in direction_entries.items()
+            ]
 
     def has_schedules(self) -> bool:
         """Check if schedules table has any data."""

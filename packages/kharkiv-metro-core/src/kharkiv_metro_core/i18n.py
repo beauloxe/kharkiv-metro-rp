@@ -27,7 +27,7 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "transfers_many": "{count} пересадки",
         # Main menu
         "main_menu": "🏠 Головне меню",
-        "route": "🚇 Маршрут",
+        "route": "📍 Маршрут",
         "schedule": "📅 Розклад",
         "stations": "📋 Станції",
         "language": "🌐 Мова",
@@ -246,9 +246,7 @@ def _build_line_internal_names() -> dict[str, str]:
 
 LINE_META: dict[str, dict[str, str]] = load_metro_data().line_meta
 LINE_INTERNAL_NAMES: dict[str, str] = _build_line_internal_names()
-INTERNAL_LINE_NAME_TO_KEY: dict[str, str] = {
-    meta["name_ua"]: key for key, meta in LINE_META.items()
-}
+INTERNAL_LINE_NAME_TO_KEY: dict[str, str] = {meta["name_ua"]: key for key, meta in LINE_META.items()}
 
 
 def get_text(key: str, lang: Language = DEFAULT_LANGUAGE, **kwargs) -> str:
@@ -322,10 +320,7 @@ def get_line_display_by_internal(internal_name: str, lang: Language = DEFAULT_LA
 
 
 def _build_line_display_to_internal(lang: Language) -> dict[str, str]:
-    return {
-        get_line_display_name(line_key, lang): LINE_INTERNAL_NAMES[line_key]
-        for line_key in LINE_META.keys()
-    }
+    return {get_line_display_name(line_key, lang): LINE_INTERNAL_NAMES[line_key] for line_key in LINE_META.keys()}
 
 
 # Reverse mapping: display name -> internal line name
@@ -366,12 +361,8 @@ def parse_line_display_name(display_name: str, lang: Language = DEFAULT_LANGUAGE
 DAY_TYPE_META: dict[str, dict[str, str]] = load_metro_data().day_types
 
 DAY_TYPE_DISPLAY_TO_INTERNAL_I18N: dict[Language, dict[str, str]] = {
-    "ua": {
-        f"{meta['emoji']} {meta['name_ua']}": key for key, meta in DAY_TYPE_META.items()
-    },
-    "en": {
-        f"{meta['emoji']} {meta['name_en']}": key for key, meta in DAY_TYPE_META.items()
-    },
+    "ua": {f"{meta['emoji']} {meta['name_ua']}": key for key, meta in DAY_TYPE_META.items()},
+    "en": {f"{meta['emoji']} {meta['name_en']}": key for key, meta in DAY_TYPE_META.items()},
 }
 
 # Combined mapping for all languages

@@ -18,6 +18,8 @@ from kharkiv_metro_core import (
     init_database,
     init_schedules,
     load_metro_data,
+)
+from kharkiv_metro_core import (
     now as core_now,
 )
 
@@ -123,7 +125,7 @@ def format_route(route: Route, lang: Language = "ua") -> str:
         f"🚇 {getattr(route.segments[0].from_station, name_attr)} → {getattr(route.segments[-1].to_station, name_attr)}",
         f"⏱ {route.total_duration_minutes} {min_text}",
         "",
-        f"📍 {get_text('route', lang)}:",
+        f"{get_text('route', lang)}:",
     ]
 
     i = 0

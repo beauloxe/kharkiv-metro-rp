@@ -654,7 +654,7 @@ async def process_reminder(callback: types.CallbackQuery, lang: Language = "ua")
     remind_time = exit_segment.departure_time
 
     if remind_time <= now():
-        await callback.answer(get_text("error_metro_closed", lang))
+        await callback.answer(get_text("error_reminder_time_passed", lang))
         return
 
     user_id = callback.from_user.id

@@ -1,8 +1,7 @@
 [deploy]
-startCommand = "uv run metro-bot"
+startCommand = "metro-bot"
 
 [env]
 DB_PATH = "/db/metro.db"
-ENABLE_ANALYTICS = true
-ANALYTICS_DB_PATH = "/db/analytics.db"
-
+ENABLE_USER_DATA = true
+USER_DATA_DB_PATH = "/db/user_data.db"

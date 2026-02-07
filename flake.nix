@@ -16,11 +16,7 @@
       # inherit (pkgs) lib;
     in {
       devShells.default = pkgs.mkShellNoCC {
-        packages = with pkgs; [
-          just
-          uv
-          ruff
-        ];
+        packages = with pkgs; [just uv ruff];
       };
     });
 }

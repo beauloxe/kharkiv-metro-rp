@@ -14,8 +14,8 @@ metro-bot:
 metro-mcp:
     uv run metro-mcp
 
-test:
-    uv run pytest
+# test:
+#     uv run pytest
 
 lint:
     uv run ruff check .
@@ -24,4 +24,10 @@ format:
     uv run ruff format .
 
 clean:
-    rm -rvf .pytest_cache .ruff_cache .mypy_cache
+    @rm -rvf dist
+    @find . -type d \(      \
+      -name "__pycache__"    \
+      -o -name ".ruff_cache"  \
+      -o -name ".pytest_cache" \
+      -o -name ".mypy_cache" \) \
+      -prune -exec rm -rvf {} +

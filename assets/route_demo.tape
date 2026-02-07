@@ -2,9 +2,15 @@ Output route_demo.gif
 Set Theme "Tomorrow Night"
 Set FontFamily "IosevkaTerm Nerd Font Mono"
 
+Set Padding 16
+Set BorderRadius 12
+Set Margin 4
+Set MarginFill "#222222"
+Set WindowBar RingsRight
+
 Set LetterSpacing 2
 Set FontSize 18
-Set Width 1200
+Set Width 1100
 Set Height 600
 
 Type "metro route салтівська турбоатом -t 07:25 -s weekday -f full"

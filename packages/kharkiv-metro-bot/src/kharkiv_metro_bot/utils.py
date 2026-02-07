@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -112,6 +113,11 @@ def get_stations_by_line_except(
     ]
 
 
+def _format_minutes(duration: int, min_text: str, approximate: bool = False) -> str:
+    prefix = "~" if approximate and duration == 2 else ""
+    return f"{prefix}{duration} {min_text}"
+
+
 def format_route(route: Route, lang: Language = "ua") -> str:
     """Format route for Telegram."""
     from kharkiv_metro_core import get_text
@@ -121,9 +127,15 @@ def format_route(route: Route, lang: Language = "ua") -> str:
     name_attr = f"name_{lang}"
     min_text = get_text("min", lang)
 
+    header_duration = (
+        _format_minutes(route.total_duration_minutes, min_text, approximate=True)
+        if route.departure_time is None or route.arrival_time is None
+        else f"{route.total_duration_minutes} {min_text}"
+    )
+
     lines = [
         f"🚇 {getattr(route.segments[0].from_station, name_attr)} → {getattr(route.segments[-1].to_station, name_attr)}",
-        f"⏱ {route.total_duration_minutes} {min_text}",
+        f"⏱ {header_duration}",
         "",
         f"{get_text('route', lang)}:",
     ]
@@ -134,8 +146,18 @@ def format_route(route: Route, lang: Language = "ua") -> str:
 
         if seg.is_transfer:
             lines.append("")
+            transfer_minutes = seg.duration_minutes
+            computed_delta = False
+            prev_seg = route.segments[i - 1] if i > 0 else None
+            arrival_time = prev_seg.arrival_time if prev_seg and prev_seg.arrival_time else seg.arrival_time
+            next_seg = route.segments[i + 1] if i + 1 < len(route.segments) else None
+            if arrival_time and next_seg and next_seg.departure_time:
+                delta_seconds = (next_seg.departure_time - arrival_time).total_seconds()
+                if delta_seconds >= 0:
+                    transfer_minutes = max(transfer_minutes, math.ceil(delta_seconds / 60))
+                    computed_delta = True
             lines.append(
-                f"🔄 {getattr(seg.from_station, name_attr)} → {getattr(seg.to_station, name_attr)} ({seg.duration_minutes} {min_text})"
+                f"🔄 {getattr(seg.from_station, name_attr)} → {getattr(seg.to_station, name_attr)} (<{_format_minutes(transfer_minutes, min_text, approximate=not computed_delta)})"
             )
             lines.append("")
             i += 1
@@ -156,14 +178,20 @@ def format_route(route: Route, lang: Language = "ua") -> str:
                 i += 1
 
             color_emoji = LINE_COLOR_EMOJI.get(line.color, "⚪")
+            has_times = start_time and end_time
             time_str = (
                 f"{start_time.strftime('%H:%M')} → {end_time.strftime('%H:%M')}"
-                if start_time and end_time
-                else f"{total_duration} {min_text}"
+                if has_times
+                else _format_minutes(total_duration, min_text, approximate=True)
+            )
+            duration_str = (
+                f"{total_duration} {min_text}"
+                if has_times
+                else _format_minutes(total_duration, min_text, approximate=True)
             )
 
             lines.append(f"{color_emoji} {getattr(start_station, name_attr)} → {getattr(end_station, name_attr)}")
-            lines.append(f"• {time_str} ({total_duration} {min_text})")
+            lines.append(f"• {time_str} ({duration_str})")
 
     return "\n".join(lines)
 

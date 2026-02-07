@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 from typing import TYPE_CHECKING
 
@@ -66,6 +67,11 @@ def init_db_if_needed(config: Config) -> MetroDatabase:
     return MetroDatabase(db_path)
 
 
+def _format_minutes(duration: int, lang: str, approximate: bool = False) -> str:
+    prefix = "~" if approximate and duration == 2 else ""
+    return f"{prefix}{duration} {_('min', lang)}"
+
+
 def display_route_table(route: Route, lang: str, compact: bool = False) -> None:
     """Display route as table."""
     total = route.total_duration_minutes
@@ -75,9 +81,9 @@ def display_route_table(route: Route, lang: str, compact: bool = False) -> None:
     if route.departure_time and route.arrival_time:
         dep = route.departure_time.strftime("%H:%M")
         arr = route.arrival_time.strftime("%H:%M")
-        time_str = f"{dep} → {arr} | {total} {_('min', lang)}, {transfers}"
+        time_str = f"{dep} → {arr} | {_format_minutes(total, lang)}, {transfers}"
     else:
-        time_str = f"{total} {_('min', lang)}, {transfers}"
+        time_str = f"{_format_minutes(total, lang, approximate=True)}, {transfers}"
     console.print(f"[dim]{time_str}[/dim]")
 
     # Build table
@@ -97,13 +103,23 @@ def display_route_table(route: Route, lang: str, compact: bool = False) -> None:
             table.add_row(from_name, to_name, line_str, time_str)
     else:
         name_attr = f"name_{lang}"
-        for seg in route.segments:
+        for idx, seg in enumerate(route.segments):
             from_name = getattr(seg.from_station, name_attr)
             to_name = getattr(seg.to_station, name_attr)
 
             if seg.is_transfer:
                 line_str = f"[yellow]{_('Transfer', lang)}[/yellow]"
-                time_str = f"{seg.duration_minutes} {_('min', lang)}"
+                transfer_minutes = seg.duration_minutes
+                computed_delta = False
+                prev_seg = route.segments[idx - 1] if idx > 0 else None
+                arrival_time = prev_seg.arrival_time if prev_seg and prev_seg.arrival_time else seg.arrival_time
+                next_seg = route.segments[idx + 1] if idx + 1 < len(route.segments) else None
+                if arrival_time and next_seg and next_seg.departure_time:
+                    delta_seconds = (next_seg.departure_time - arrival_time).total_seconds()
+                    if delta_seconds >= 0:
+                        transfer_minutes = max(transfer_minutes, math.ceil(delta_seconds / 60))
+                        computed_delta = True
+                time_str = f"<{_format_minutes(transfer_minutes, lang, approximate=not computed_delta)}"
             else:
                 line = seg.from_station.line
                 line_name = getattr(line, f"display_name_{lang}")
@@ -111,9 +127,9 @@ def display_route_table(route: Route, lang: str, compact: bool = False) -> None:
                 if seg.departure_time and seg.arrival_time:
                     dep = seg.departure_time.strftime("%H:%M")
                     arr = seg.arrival_time.strftime("%H:%M")
-                    time_str = f"{dep} → {arr} | {seg.duration_minutes} {_('min', lang)}"
+                    time_str = f"{dep} → {arr} | {_format_minutes(seg.duration_minutes, lang)}"
                 else:
-                    time_str = f"{seg.duration_minutes} {_('min', lang)}"
+                    time_str = _format_minutes(seg.duration_minutes, lang, approximate=True)
 
             table.add_row(from_name, to_name, line_str, time_str)
 
@@ -136,6 +152,7 @@ def display_route_simple(route: Route, lang: str, compact: bool = False) -> None
 
     # Group time by line segments (between transfers)
     time_parts = []
+    has_times = True
     i = 0
     while i < len(route.segments):
         seg = route.segments[i]
@@ -148,10 +165,15 @@ def display_route_simple(route: Route, lang: str, compact: bool = False) -> None
         start_time = seg.departure_time
         end_time = seg.arrival_time
 
+        if not start_time or not end_time:
+            has_times = False
+
         # Find end of this line section
         i += 1
         while i < len(route.segments) and not route.segments[i].is_transfer:
             end_time = route.segments[i].arrival_time
+            if not end_time:
+                has_times = False
             i += 1
 
         if start_time and end_time:
@@ -160,9 +182,9 @@ def display_route_simple(route: Route, lang: str, compact: bool = False) -> None
             time_parts.append(f"{dep} → {arr}")
 
     if time_parts:
-        time_str = "; ".join(time_parts) + f" | {total} {_('min', lang)}, {transfers}"
+        time_str = "; ".join(time_parts) + f" | {_format_minutes(total, lang, approximate=not has_times)}, {transfers}"
     else:
-        time_str = f"{total} {_('min', lang)}, {transfers}"
+        time_str = f"{_format_minutes(total, lang, approximate=True)}, {transfers}"
 
     console.print(f"[dim]{time_str}[/dim]")
     console.print(path_str)
@@ -178,12 +200,22 @@ def _group_segments(route: Route, lang: str) -> list[dict]:
         seg = route.segments[i]
 
         if seg.is_transfer:
+            transfer_minutes = seg.duration_minutes
+            computed_delta = False
+            prev_seg = route.segments[i - 1] if i > 0 else None
+            arrival_time = prev_seg.arrival_time if prev_seg and prev_seg.arrival_time else seg.arrival_time
+            next_seg = route.segments[i + 1] if i + 1 < len(route.segments) else None
+            if arrival_time and next_seg and next_seg.departure_time:
+                delta_seconds = (next_seg.departure_time - arrival_time).total_seconds()
+                if delta_seconds >= 0:
+                    transfer_minutes = max(transfer_minutes, math.ceil(delta_seconds / 60))
+                    computed_delta = True
             result.append(
                 {
                     "from": getattr(seg.from_station, name_attr),
                     "to": getattr(seg.to_station, name_attr),
                     "line": f"[yellow]{_('Transfer', lang)}[/yellow]",
-                    "time": f"{seg.duration_minutes} {_('min', lang)}",
+                    "time": f"<{_format_minutes(transfer_minutes, lang, approximate=not computed_delta)}",
                 }
             )
             i += 1
@@ -204,10 +236,11 @@ def _group_segments(route: Route, lang: str) -> list[dict]:
                 total_time += route.segments[i].duration_minutes
                 i += 1
 
+            has_times = start_time and end_time
             time_str = (
-                f"{start_time.strftime('%H:%M')} → {end_time.strftime('%H:%M')} | {total_time} {_('min', lang)}"
-                if start_time and end_time
-                else f"{total_time} {_('min', lang)}"
+                f"{start_time.strftime('%H:%M')} → {end_time.strftime('%H:%M')} | {_format_minutes(total_time, lang)}"
+                if has_times
+                else _format_minutes(total_time, lang, approximate=True)
             )
 
             result.append(

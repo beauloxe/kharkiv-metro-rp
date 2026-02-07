@@ -1,4 +1,9 @@
+[build]
+watchPatterns = ["/packages/kharkiv-metro-bot/**", "/packages/kharkiv-metro-core/**"]
+buildCommand = "uv pip install -e ./packages/kharkiv-metro-bot -e ./packages/kharkiv-metro-cli"
+
 [deploy]
+preDeployCommand = ["metro scrape --init-db"]
 startCommand = "metro-bot"
 
 [env]

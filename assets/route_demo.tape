@@ -5,7 +5,7 @@ Set FontFamily "IosevkaTerm Nerd Font Mono"
 Set Padding 16
 Set BorderRadius 12
 Set Margin 4
-Set MarginFill "#222222"
+Set MarginFill "#0D1117"
 Set WindowBar RingsRight
 
 Set LetterSpacing 2

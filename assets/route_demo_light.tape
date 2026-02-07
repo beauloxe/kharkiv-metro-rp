@@ -1,11 +1,11 @@
-Output route_demo.gif
-Set Theme "GruvboxDarkHard"
+Output route_demo_light.gif
+Set Theme "Gruvbox Light"
 Set FontFamily "IosevkaTerm Nerd Font Mono"
 
 Set Padding 16
 Set BorderRadius 12
 Set Margin 4
-Set MarginFill "#0D1117"
+Set MarginFill "#FFFFFF"
 Set WindowBar RingsRight
 
 Set LetterSpacing 2

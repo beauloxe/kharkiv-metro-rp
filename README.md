@@ -2,7 +2,11 @@
 
 Telegram-бот, CLI та MCP-сервер для планування маршрутів у Харківському метрополітені.
 
-![Default and simple CLI output for routes](assets/route_demo.gif)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/route_demo.gif">
+  <source media="(prefers-color-scheme: light)" srcset="assets/route_demo_light.gif">
+  <img alt="Full and simple CLI output with compact option" src="assets/route_demo.gif">
+</picture>
 
 ## Особливості
 

@@ -61,6 +61,7 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "error_station_not_found": "❌ Станцію не знайдено: {station}\nСпробуйте ще раз через /route",
         "error_route_not_found": "❌ Маршрут не знайдено\nСпробуйте інші станції.",
         "error_metro_closed": "❌ Метро закрите та/або на останній потяг неможливо встигнути\nСпробуйте інший час або день.",
+        "error_reminder_time_passed": "❌ Час вже пройшов, нагадування неможливо встановити",
         "error_generic": "❌ Помилка: {error}\nСпробуйте ще раз через /route",
         "error_cancelled": "❌ Побудову маршруту скасовано",
         # Reminders
@@ -168,6 +169,7 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "error_station_not_found": "❌ Station not found: {station}\nPlease try again via /route",
         "error_route_not_found": "❌ Route not found\nPlease try other stations.",
         "error_metro_closed": "❌ Metro is closed and/or you cannot catch the last train\nPlease try another time or day.",
+        "error_reminder_time_passed": "❌ Time has already passed, reminder cannot be set",
         "error_generic": "❌ Error: {error}\nPlease try again via /route",
         "error_cancelled": "❌ Route planning cancelled",
         # Reminders

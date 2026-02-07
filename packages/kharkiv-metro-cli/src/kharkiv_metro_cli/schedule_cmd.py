@@ -145,14 +145,11 @@ def _output_table(
     """Output schedule in table format."""
     name_attr = f"name_{lang}"
 
-    # Show operating hours
-    if first_departure and last_departure:
-        hours_text = (
-            f"{tr('Operating hours', lang)}: {first_departure.strftime('%H:%M')} - {last_departure.strftime('%H:%M')}"
-        )
-        if not is_open:
-            hours_text += f" [{tr('CLOSED', lang)}]"
-        console.print(f"[bold cyan]{hours_text}[/bold cyan]\n")
+    # Show station name and line
+    line_name = getattr(st.line, f"display_name_{lang}")
+    console.print(
+        f"[dim]{tr('Station', lang)}:[/dim] {getattr(st, name_attr)} ({line_name} {tr('Line', lang).lower()})"
+    )
 
     # Collect schedule data
     schedule_data = []
@@ -179,7 +176,7 @@ def _output_table(
         return
 
     # Display table
-    table = Table(show_header=True, header_style="bold yellow")
+    table = Table(show_header=True, header_style="bold magenta")
     table.add_column(tr("Hour", lang))
 
     for dir_name, _ in schedule_data:

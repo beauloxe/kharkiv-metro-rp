@@ -96,7 +96,15 @@
       };
 
       devShells.default = pkgs.mkShellNoCC {
-        packages = with pkgs; [just uv ruff python];
+        packages = with pkgs; [
+          just
+          uv
+          ruff
+          python
+          # for demo in assets/
+          bashInteractive # see https://github.com/charmbracelet/vhs/issues/458
+          vhs
+        ];
       };
     });
 }

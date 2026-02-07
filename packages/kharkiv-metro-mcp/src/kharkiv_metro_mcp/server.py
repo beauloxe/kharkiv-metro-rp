@@ -5,10 +5,9 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import logging
-from datetime import datetime
 from typing import Any
 
-from kharkiv_metro_core import Config, DayType, MetroDatabase, MetroRouter, Route, now
+from kharkiv_metro_core import DayType, MetroDatabase, MetroRouter, Route, now
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool

@@ -1,6 +1,7 @@
 """Kharkiv Metro Core Library."""
 
 from .config import Config
+from .data_loader import load_metro_data
 from .database import MetroDatabase
 from .graph import MetroGraph, get_metro_graph
 from .i18n import (
@@ -16,9 +17,7 @@ from .i18n import (
     parse_day_type_display,
     parse_line_display_name,
 )
-from .data_loader import load_metro_data
 from .initializer import init_database, init_schedules, init_stations
-from .time_utils import now
 from .models import (
     DayType,
     Line,
@@ -31,6 +30,7 @@ from .models import (
     create_stations,
 )
 from .router import MetroRouter
+from .time_utils import now
 
 # Lazy import for MetroScraper to avoid loading aiohttp/bs4 on startup
 # These are heavy dependencies only needed for scraping operations

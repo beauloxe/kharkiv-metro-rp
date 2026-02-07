@@ -11,8 +11,8 @@ from urllib.parse import unquote, urljoin
 import aiohttp
 from bs4 import BeautifulSoup
 
-from .models import DayType, ScheduleEntry, StationSchedule, create_stations
 from .data_loader import load_metro_data
+from .models import DayType, ScheduleEntry, StationSchedule, create_stations
 
 metro_data = load_metro_data()
 SCRAPER_CONFIG = metro_data.scraper

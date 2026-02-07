@@ -11,7 +11,6 @@ from pathlib import Path
 from .config import Config
 from .models import DayType, ScheduleEntry, StationSchedule
 
-
 _CONNECTIONS: dict[str, sqlite3.Connection] = {}
 
 
@@ -52,7 +51,7 @@ class MetroDatabase:
             self._connection = None
 
     @classmethod
-    def shared(cls, db_path: str | None = None) -> "MetroDatabase":
+    def shared(cls, db_path: str | None = None) -> MetroDatabase:
         """Return a MetroDatabase using a shared connection."""
         if db_path is None:
             from .config import Config

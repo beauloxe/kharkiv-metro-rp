@@ -2,8 +2,8 @@
 
 import asyncio
 import re
+from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Callable
 
 from aiogram import Dispatcher, F, Router, types
 from aiogram.filters import Command, StateFilter
@@ -29,8 +29,8 @@ from ..keyboards import (
 )
 from ..states import RouteStates
 from ..user_data import (
-    clear_user_reminders,
     cleanup_expired_reminders,
+    clear_user_reminders,
     deactivate_user_reminder,
     get_all_active_reminders,
     save_user_reminder,
@@ -88,9 +88,7 @@ async def update_message(
 
 def get_valid_lines(lang: Language) -> list[str]:
     """Get list of valid line display names."""
-    return [
-        get_line_display_name(line_key, lang) for line_key in load_metro_data().line_order
-    ]
+    return [get_line_display_name(line_key, lang) for line_key in load_metro_data().line_order]
 
 
 def parse_time(time_str: str) -> datetime | None:

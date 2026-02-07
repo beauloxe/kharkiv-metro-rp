@@ -320,7 +320,7 @@ def get_line_display_by_internal(internal_name: str, lang: Language = DEFAULT_LA
 
 
 def _build_line_display_to_internal(lang: Language) -> dict[str, str]:
-    return {get_line_display_name(line_key, lang): LINE_INTERNAL_NAMES[line_key] for line_key in LINE_META.keys()}
+    return {get_line_display_name(line_key, lang): LINE_INTERNAL_NAMES[line_key] for line_key in LINE_META}
 
 
 # Reverse mapping: display name -> internal line name

@@ -33,8 +33,7 @@ def _add_nav_buttons(keyboard: list, lang: Language) -> list:
 def get_lines_keyboard(lang: Language = "ua") -> ReplyKeyboardMarkup:
     """Create keyboard with line selection and navigation."""
     keyboard = [
-        [KeyboardButton(text=get_line_display_name(line_key, lang))]
-        for line_key in load_metro_data().line_order
+        [KeyboardButton(text=get_line_display_name(line_key, lang))] for line_key in load_metro_data().line_order
     ]
     keyboard = _add_nav_buttons(keyboard, lang)
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True, one_time_keyboard=True)

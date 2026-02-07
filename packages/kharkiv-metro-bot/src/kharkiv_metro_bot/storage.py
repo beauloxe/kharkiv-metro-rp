@@ -9,8 +9,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from aiogram.fsm.storage.base import BaseStorage, StorageKey
 from aiogram.fsm.state import State
+from aiogram.fsm.storage.base import BaseStorage, StorageKey
 
 
 class SqliteStorage(BaseStorage):
@@ -22,7 +22,7 @@ class SqliteStorage(BaseStorage):
         self._init_db()
 
     @classmethod
-    def from_user_data_db(cls) -> "SqliteStorage":
+    def from_user_data_db(cls) -> SqliteStorage:
         """Create storage using user data database path."""
         from .user_data import USER_DATA_DB_PATH
 

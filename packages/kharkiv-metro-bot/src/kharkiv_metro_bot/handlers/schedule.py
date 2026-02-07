@@ -35,9 +35,7 @@ async def cmd_schedule(message: types.Message, state: FSMContext, lang: Language
     if len(args) < 2:
         await state.set_state(ScheduleStates.waiting_for_line)
 
-        valid_lines = [
-            get_line_display_name(line_key, lang) for line_key in load_metro_data().line_order
-        ]
+        valid_lines = [get_line_display_name(line_key, lang) for line_key in load_metro_data().line_order]
 
         msg = await message.answer(
             get_text("select_line", lang),
@@ -70,7 +68,6 @@ async def cmd_schedule(message: types.Message, state: FSMContext, lang: Language
 
         result = format_schedule(getattr(st, f"name_{lang}"), schedules, router, lang)
         await message.answer(result, reply_markup=get_main_keyboard(lang))
-
 
     except Exception as e:
         await message.answer(

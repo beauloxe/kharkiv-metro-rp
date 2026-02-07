@@ -21,9 +21,7 @@ async def cmd_stations(message: types.Message, state: FSMContext, lang: Language
     await state.clear()
     await state.set_state(StationsStates.waiting_for_line)
 
-    valid_lines = [
-        get_line_display_name(line_key, lang) for line_key in load_metro_data().line_order
-    ]
+    valid_lines = [get_line_display_name(line_key, lang) for line_key in load_metro_data().line_order]
 
     msg = await message.answer(
         get_text("select_line", lang),

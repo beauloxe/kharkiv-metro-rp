@@ -7,7 +7,6 @@ import sys
 from datetime import timedelta
 
 from aiogram import Bot, Dispatcher
-from .storage import SqliteStorage
 from dotenv import load_dotenv
 
 from kharkiv_metro_bot.handlers import (
@@ -21,6 +20,8 @@ from kharkiv_metro_bot.handlers.common import set_bot_commands
 from kharkiv_metro_bot.handlers.route import restore_pending_reminders
 from kharkiv_metro_bot.middleware.i18n_middleware import I18nMiddleware
 from kharkiv_metro_bot.user_data import cleanup_expired_reminders, is_user_data_enabled, track_user
+
+from .storage import SqliteStorage
 
 logger = logging.getLogger(__name__)
 

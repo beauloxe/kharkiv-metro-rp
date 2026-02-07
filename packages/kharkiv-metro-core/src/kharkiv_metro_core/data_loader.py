@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from importlib.resources import files
 from typing import Any
-
-from functools import lru_cache
 
 
 @dataclass(frozen=True)

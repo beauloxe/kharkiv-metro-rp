@@ -69,7 +69,7 @@ _demo-dark: _pre-demo
     #!/usr/bin/env vhs
     Output route_demo.gif
     Set Theme "GruvboxDarkHard"
-    Set MarginFill "#000000"
+    Set MarginFill "#0D1117"
 
     {{vhs-script}}
 

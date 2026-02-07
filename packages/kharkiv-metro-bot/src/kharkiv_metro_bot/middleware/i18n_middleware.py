@@ -5,7 +5,7 @@ from aiogram.types import CallbackQuery, Message
 from kharkiv_metro_core import DEFAULT_LANGUAGE, Language
 from kharkiv_metro_core import get_text as _get_text
 
-from ..analytics import get_user_language
+from ..user_data import get_user_language
 
 
 class I18nMiddleware(BaseMiddleware):

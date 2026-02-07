@@ -25,9 +25,9 @@ compact = false  # true = show only key stations (start, transfers, end)
 timeout = 30
 user_agent = "kharkiv-metro-rp/1.0"
 
-[analytics]
+[user_data]
 enabled = true
-salt = "default-salt-change-me"  # Змініть для продакшену
+# path = "~/.local/share/kharkiv-metro-rp/user_data.db"
 """
 
 
@@ -138,19 +138,23 @@ class Config:
                 return os.path.expanduser(path)
             return str(self.data_dir / "metro.db")
 
-    def get_analytics_db_path(self) -> str:
-        """Get analytics database path.
-        
-        Supports ANALYTICS_DB_PATH environment variable for persistent storage.
+    def get_user_data_db_path(self) -> str:
+        """Get user data database path.
+
+        Supports USER_DATA_DB_PATH environment variable for persistent storage.
         """
-        env_path = os.getenv("ANALYTICS_DB_PATH")
+        env_path = os.getenv("USER_DATA_DB_PATH")
         if env_path:
             return os.path.expanduser(env_path)
-        return str(self.data_dir / "analytics.db")
 
-    def is_analytics_enabled(self) -> bool:
-        """Check if analytics is enabled."""
-        return self.get("analytics.enabled", True)
+        path = self.get("user_data.path")
+        if path:
+            return os.path.expanduser(path)
+        return str(self.data_dir / "user_data.db")
+
+    def is_user_data_enabled(self) -> bool:
+        """Check if user data storage is enabled."""
+        return self.get("user_data.enabled", True)
 
     def to_dict(self) -> dict[str, Any]:
         """Return configuration as dictionary."""

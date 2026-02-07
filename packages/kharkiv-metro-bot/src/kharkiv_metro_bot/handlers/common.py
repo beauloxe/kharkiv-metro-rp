@@ -6,9 +6,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import BotCommand
 from kharkiv_metro_core import Language, get_text
 
-from ..analytics import get_user_language, set_user_language
 from ..constants import CommandText
 from ..keyboards import get_language_keyboard, get_lines_keyboard, get_main_keyboard
+from ..user_data import get_user_language, set_user_language
 
 
 async def cmd_start(message: types.Message, lang: Language = "ua"):

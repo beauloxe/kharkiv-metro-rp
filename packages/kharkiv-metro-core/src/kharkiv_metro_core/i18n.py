@@ -224,6 +224,20 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
     },
 }
 
+LINE_INTERNAL_NAMES: dict[str, str] = {
+    "kholodnohirsko_zavodska": "Холодногірсько-заводська",
+    "saltivska": "Салтівська",
+    "oleksiivska": "Олексіївська",
+}
+
+LINE_DISPLAY_TEXT_KEYS: dict[str, dict[str, str]] = {
+    "kholodnohirsko_zavodska": {"full": "line_red", "short": "line_red_short"},
+    "saltivska": {"full": "line_blue", "short": "line_blue_short"},
+    "oleksiivska": {"full": "line_green", "short": "line_green_short"},
+}
+
+INTERNAL_LINE_NAME_TO_KEY: dict[str, str] = {name: key for key, name in LINE_INTERNAL_NAMES.items()}
+
 
 def get_text(key: str, lang: Language = DEFAULT_LANGUAGE, **kwargs) -> str:
     """Get translated text by key.
@@ -255,12 +269,10 @@ def get_line_display_name(line_key: str, lang: Language = DEFAULT_LANGUAGE) -> s
     Returns:
         Display name with emoji
     """
-    mapping = {
-        "kholodnohirsko_zavodska": get_text("line_red", lang),
-        "saltivska": get_text("line_blue", lang),
-        "oleksiivska": get_text("line_green", lang),
-    }
-    return mapping.get(line_key, line_key)
+    mapping = LINE_DISPLAY_TEXT_KEYS.get(line_key)
+    if not mapping:
+        return line_key
+    return get_text(mapping["full"], lang)
 
 
 def get_line_short_name(line_key: str, lang: Language = DEFAULT_LANGUAGE) -> str:
@@ -273,12 +285,10 @@ def get_line_short_name(line_key: str, lang: Language = DEFAULT_LANGUAGE) -> str
     Returns:
         Short display name
     """
-    mapping = {
-        "kholodnohirsko_zavodska": get_text("line_red_short", lang),
-        "saltivska": get_text("line_blue_short", lang),
-        "oleksiivska": get_text("line_green_short", lang),
-    }
-    return mapping.get(line_key, line_key)
+    mapping = LINE_DISPLAY_TEXT_KEYS.get(line_key)
+    if not mapping:
+        return line_key
+    return get_text(mapping["short"], lang)
 
 
 def get_line_display_by_internal(internal_name: str, lang: Language = DEFAULT_LANGUAGE) -> str:
@@ -291,26 +301,22 @@ def get_line_display_by_internal(internal_name: str, lang: Language = DEFAULT_LA
     Returns:
         Display name with emoji (e.g., '🔴 Kholodnohirsko-Zavodska')
     """
-    mapping = {
-        "Холодногірсько-заводська": get_text("line_red", lang),
-        "Салтівська": get_text("line_blue", lang),
-        "Олексіївська": get_text("line_green", lang),
+    line_key = INTERNAL_LINE_NAME_TO_KEY.get(internal_name)
+    if not line_key:
+        return internal_name
+    return get_line_display_name(line_key, lang)
+
+
+def _build_line_display_to_internal(lang: Language) -> dict[str, str]:
+    return {
+        get_text(keys["full"], lang): LINE_INTERNAL_NAMES[line_key] for line_key, keys in LINE_DISPLAY_TEXT_KEYS.items()
     }
-    return mapping.get(internal_name, internal_name)
 
 
 # Reverse mapping: display name -> internal name
 LINE_DISPLAY_TO_INTERNAL_I18N: dict[Language, dict[str, str]] = {
-    "ua": {
-        "🔴 Холодногірсько-Заводська": "Холодногірсько-заводська",
-        "🔵 Салтівська": "Салтівська",
-        "🟢 Олексіївська": "Олексіївська",
-    },
-    "en": {
-        "🔴 Kholodnohirsko-Zavodska": "Холодногірсько-заводська",
-        "🔵 Saltivska": "Салтівська",
-        "🟢 Oleksiivska": "Олексіївська",
-    },
+    "ua": _build_line_display_to_internal("ua"),
+    "en": _build_line_display_to_internal("en"),
 }
 
 # Combined mapping for all languages (for state-based validation)

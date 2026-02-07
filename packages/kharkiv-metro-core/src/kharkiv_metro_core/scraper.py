@@ -135,6 +135,175 @@ STATION_URL_MAPPING = {
 }
 
 
+def _extract_station_slug(href: str) -> str:
+    """Extract station slug from URL."""
+    # Decode URL encoding
+    href = unquote(href)
+
+    # Extract from URLs like:
+    # - "stantsiia-«kholodna-hokra».html" (weekday)
+    # - "stantsiia-«kholodna-hokra»-vykhidni-dni.html" (weekend)
+    # - "stantsiia-«vokzalna»-(vykhidni-dni).html" (weekend alt)
+    match = re.search(r'stantsiia-[«"]?([^"»]+?)["»]?(?:-\(?(?:vykhidni-dni)\)?)?\.html', href)
+    if match:
+        slug = match.group(1)
+        return slug.lower()
+
+    return ""
+
+
+def _parse_line_stations(html: str, day_type: DayType, line_slug: str) -> list[dict]:
+    """Parse station URLs for a line."""
+    soup = BeautifulSoup(html, "html.parser")
+    stations = []
+
+    # Find all station links in the content
+    content = soup.find("div", class_="content-text")
+    if content:
+        for link in content.find_all("a", href=True):
+            href = str(link.get("href", ""))
+            if "stantsiia-" in href:
+                station_name = link.get_text(strip=True).strip('"').strip("«»")
+                station_slug = _extract_station_slug(href)
+                station_id = STATION_URL_MAPPING.get(station_slug)
+
+                if station_id:
+                    stations.append(
+                        {
+                            "id": station_id,
+                            "name": station_name,
+                            "url": urljoin(BASE_URL, str(href)),
+                        }
+                    )
+
+    # For Line 3 (Oleksiivska), add missing stations from direct URLs
+    if line_slug == "oleksiivska":
+        existing_ids = {s["id"] for s in stations}
+        for station_id, station_path in LINE_3_STATION_URLS[day_type].items():
+            if station_id not in existing_ids:
+                stations.append(
+                    {
+                        "id": station_id,
+                        "name": STATION_NAMES.get(station_id, station_id),
+                        "url": urljoin(BASE_URL, station_path),
+                    }
+                )
+
+    return stations
+
+
+def _parse_station_schedule(html: str, station_url: str, station_id: str) -> list[StationSchedule]:
+    """Parse schedule for a single station."""
+    soup = BeautifulSoup(html, "html.parser")
+    schedules = []
+
+    # Find schedule tables
+    tables = soup.find_all("table")
+
+    for table in tables:
+        # Try to determine direction from preceding header
+        prev = table.find_previous(["h3", "h4", "h5"])
+        if not prev:
+            prev = table.find_previous("strong")
+        direction = None
+
+        if prev:
+            text = prev.get_text()
+            # Extract direction station name from header
+            match = re.search(r'[«"]([^»"]+)[»"]', text)
+            if match:
+                direction_name = match.group(1)
+                direction = _find_station_id_by_name(direction_name)
+                print(f"    Direction found: {direction_name} -> {direction}")
+
+        if direction:
+            entries = _parse_schedule_table(table)
+            print(f"    Found {len(entries)} entries")
+            if entries:
+                # Determine day type from URL
+                day_type = DayType.WEEKDAY
+                if "vykhidni" in station_url.lower():
+                    day_type = DayType.WEEKEND
+
+                schedules.append(
+                    StationSchedule(
+                        station_id=station_id,
+                        direction_station_id=direction,
+                        day_type=day_type,
+                        entries=entries,
+                    )
+                )
+        else:
+            debug_text = prev.get_text()[:100] if prev else "No header found"
+            print(f"    Warning: Could not determine direction from text: {debug_text}")
+
+    return schedules
+
+
+def _parse_schedule_table(table) -> list[ScheduleEntry]:
+    """Parse schedule entries from HTML table."""
+    entries = []
+    rows = table.find_all("tr")
+
+    for row in rows:
+        cells = row.find_all(["td", "th"])
+        if len(cells) < 2:
+            continue
+
+        # First cell should contain hour
+        hour_text = cells[0].get_text(strip=True)
+        hour_match = re.match(r"(\d+):?", hour_text)
+        if not hour_match:
+            continue
+
+        try:
+            hour = int(hour_match.group(1))
+        except ValueError:
+            continue
+
+        # Remaining cells contain minutes
+        for cell in cells[1:]:
+            minute_text = cell.get_text(strip=True)
+            if not minute_text or minute_text == "&nbsp;":
+                continue
+
+            # Extract number from text (might have * for last trains)
+            minute_match = re.search(r"(\d+)", minute_text)
+            if minute_match:
+                try:
+                    minutes = int(minute_match.group(1))
+                    if 0 <= minutes < 60:
+                        entries.append(ScheduleEntry(hour=hour, minutes=minutes))
+                except ValueError:
+                    continue
+
+    return entries
+
+
+@lru_cache(maxsize=128)
+def _find_station_id_by_name(name: str) -> str | None:
+    """Find station ID by Ukrainian name."""
+    name_lower = name.lower().strip()
+
+    # Try exact match first
+    if name_lower in _STATION_NAME_TO_ID:
+        return _STATION_NAME_TO_ID[name_lower]
+
+    # Try with normalized name (remove quotes, etc)
+    normalized = name_lower.replace("'", "").replace("«", "").replace("»", "").strip()
+    if normalized in _STATION_NAME_TO_ID:
+        return _STATION_NAME_TO_ID[normalized]
+
+    # Try partial match
+    for station_name, station_id in _STATION_NAME_TO_ID.items():
+        if name_lower in station_name or station_name in name_lower:
+            return station_id
+
+    # Debug: print what we couldn't find
+    print(f"      Could not find station ID for: '{name}'")
+    return None
+
+
 class AsyncMetroScraper:
     """Async scraper for Kharkiv metro schedules with concurrency control."""
 
@@ -167,58 +336,7 @@ class AsyncMetroScraper:
         if not html:
             return []
 
-        soup = BeautifulSoup(html, "html.parser")
-        stations = []
-
-        # Find all station links in the content
-        content = soup.find("div", class_="content-text")
-        if content:
-            for link in content.find_all("a", href=True):
-                href = str(link.get("href", ""))
-                if "stantsiia-" in href:
-                    station_name = link.get_text(strip=True).strip('"').strip("«»")
-                    station_slug = self._extract_station_slug(href)
-                    station_id = STATION_URL_MAPPING.get(station_slug)
-
-                    if station_id:
-                        stations.append(
-                            {
-                                "id": station_id,
-                                "name": station_name,
-                                "url": urljoin(BASE_URL, str(href)),
-                            }
-                        )
-
-        # For Line 3 (Oleksiivska), add missing stations from direct URLs
-        if line_slug == "oleksiivska":
-            existing_ids = {s["id"] for s in stations}
-            for station_id, station_path in LINE_3_STATION_URLS[day_type].items():
-                if station_id not in existing_ids:
-                    stations.append(
-                        {
-                            "id": station_id,
-                            "name": STATION_NAMES.get(station_id, station_id),
-                            "url": urljoin(BASE_URL, station_path),
-                        }
-                    )
-
-        return stations
-
-    def _extract_station_slug(self, href: str) -> str:
-        """Extract station slug from URL."""
-        # Decode URL encoding
-        href = unquote(href)
-
-        # Extract from URLs like:
-        # - "stantsiia-«kholodna-hokra».html" (weekday)
-        # - "stantsiia-«kholodna-hokra»-vykhidni-dni.html" (weekend)
-        # - "stantsiia-«vokzalna»-(vykhidni-dni).html" (weekend alt)
-        match = re.search(r'stantsiia-[«"]?([^"»]+?)["»]?(?:-\(?(?:vykhidni-dni)\)?)?\.html', href)
-        if match:
-            slug = match.group(1)
-            return slug.lower()
-
-        return ""
+        return _parse_line_stations(html, day_type, line_slug)
 
     async def fetch_station_schedule(
         self, session: aiohttp.ClientSession, station_url: str, station_id: str
@@ -228,112 +346,7 @@ class AsyncMetroScraper:
         if not html:
             return []
 
-        soup = BeautifulSoup(html, "html.parser")
-        schedules = []
-
-        # Find schedule tables
-        tables = soup.find_all("table")
-
-        for table in tables:
-            # Try to determine direction from preceding header
-            prev = table.find_previous(["h3", "h4", "h5"])
-            if not prev:
-                prev = table.find_previous("strong")
-            direction = None
-
-            if prev:
-                text = prev.get_text()
-                # Extract direction station name from header
-                match = re.search(r'[«"]([^»"]+)[»"]', text)
-                if match:
-                    direction_name = match.group(1)
-                    direction = self._find_station_id_by_name(direction_name)
-                    print(f"    Direction found: {direction_name} -> {direction}")
-
-            if direction:
-                entries = self._parse_schedule_table(table)
-                print(f"    Found {len(entries)} entries")
-                if entries:
-                    # Determine day type from URL
-                    day_type = DayType.WEEKDAY
-                    if "vykhidni" in station_url.lower():
-                        day_type = DayType.WEEKEND
-
-                    schedules.append(
-                        StationSchedule(
-                            station_id=station_id,
-                            direction_station_id=direction,
-                            day_type=day_type,
-                            entries=entries,
-                        )
-                    )
-            else:
-                debug_text = prev.get_text()[:100] if prev else "No header found"
-                print(f"    Warning: Could not determine direction from text: {debug_text}")
-
-        return schedules
-
-    def _parse_schedule_table(self, table) -> list[ScheduleEntry]:
-        """Parse schedule entries from HTML table."""
-        entries = []
-        rows = table.find_all("tr")
-
-        for row in rows:
-            cells = row.find_all(["td", "th"])
-            if len(cells) < 2:
-                continue
-
-            # First cell should contain hour
-            hour_text = cells[0].get_text(strip=True)
-            hour_match = re.match(r"(\d+):?", hour_text)
-            if not hour_match:
-                continue
-
-            try:
-                hour = int(hour_match.group(1))
-            except ValueError:
-                continue
-
-            # Remaining cells contain minutes
-            for cell in cells[1:]:
-                minute_text = cell.get_text(strip=True)
-                if not minute_text or minute_text == "&nbsp;":
-                    continue
-
-                # Extract number from text (might have * for last trains)
-                minute_match = re.search(r"(\d+)", minute_text)
-                if minute_match:
-                    try:
-                        minutes = int(minute_match.group(1))
-                        if 0 <= minutes < 60:
-                            entries.append(ScheduleEntry(hour=hour, minutes=minutes))
-                    except ValueError:
-                        continue
-
-        return entries
-
-    @lru_cache(maxsize=128)
-    def _find_station_id_by_name(self, name: str) -> str | None:
-        """Find station ID by Ukrainian name."""
-        name_lower = name.lower().strip()
-
-        # Try exact match first
-        if name_lower in _STATION_NAME_TO_ID:
-            return _STATION_NAME_TO_ID[name_lower]
-
-        # Try with normalized name (remove quotes, etc)
-        normalized = name_lower.replace("'", "").replace("«", "").replace("»", "").strip()
-        if normalized in _STATION_NAME_TO_ID:
-            return _STATION_NAME_TO_ID[normalized]
-
-        # Try partial match
-        for station_name, station_id in _STATION_NAME_TO_ID.items():
-            if name_lower in station_name or station_name in name_lower:
-                return station_id
-
-        # Debug: print what we couldn't find
-        print(f"      Could not find station ID for: '{name}'")
-        return None
+        return _parse_station_schedule(html, station_url, station_id)
 
     async def scrape_all_schedules(self) -> dict[str, list[StationSchedule]]:
         """Scrape all schedules for all lines and day types concurrently."""
@@ -413,51 +426,7 @@ class MetroScraper:
         if not html:
             return []
 
-        soup = BeautifulSoup(html, "html.parser")
-        stations = []
-
-        content = soup.find("div", class_="content-text")
-        if content:
-            for link in content.find_all("a", href=True):
-                href = str(link.get("href", ""))
-                if "stantsiia-" in href:
-                    station_name = link.get_text(strip=True).strip('"').strip("«»")
-                    station_slug = self._extract_station_slug(href)
-                    station_id = STATION_URL_MAPPING.get(station_slug)
-
-                    if station_id:
-                        stations.append(
-                            {
-                                "id": station_id,
-                                "name": station_name,
-                                "url": urljoin(BASE_URL, str(href)),
-                            }
-                        )
-
-        if line_slug == "oleksiivska":
-            existing_ids = {s["id"] for s in stations}
-            for station_id, station_path in LINE_3_STATION_URLS[day_type].items():
-                if station_id not in existing_ids:
-                    stations.append(
-                        {
-                            "id": station_id,
-                            "name": STATION_NAMES.get(station_id, station_id),
-                            "url": urljoin(BASE_URL, station_path),
-                        }
-                    )
-
-        return stations
-
-    def _extract_station_slug(self, href: str) -> str:
-        """Extract station slug from URL."""
-        href = unquote(href)
-
-        match = re.search(r'stantsiia-[«"]?([^"»]+?)["»]?(?:-\(?(?:vykhidni-dni)\)?)?\.html', href)
-        if match:
-            slug = match.group(1)
-            return slug.lower()
-
-        return ""
+        return _parse_line_stations(html, day_type, line_slug)
 
     def fetch_station_schedule(self, station_url: str, station_id: str) -> list[StationSchedule]:
         """Fetch schedule for a single station."""
@@ -465,101 +434,7 @@ class MetroScraper:
         if not html:
             return []
 
-        soup = BeautifulSoup(html, "html.parser")
-        schedules = []
-
-        tables = soup.find_all("table")
-
-        for table in tables:
-            prev = table.find_previous(["h3", "h4", "h5"])
-            if not prev:
-                prev = table.find_previous("strong")
-            direction = None
-
-            if prev:
-                text = prev.get_text()
-                match = re.search(r'[«"]([^»"]+)[»"]', text)
-                if match:
-                    direction_name = match.group(1)
-                    direction = self._find_station_id_by_name(direction_name)
-                    print(f"    Direction found: {direction_name} -> {direction}")
-
-            if direction:
-                entries = self._parse_schedule_table(table)
-                print(f"    Found {len(entries)} entries")
-                if entries:
-                    day_type = DayType.WEEKDAY
-                    if "vykhidni" in station_url.lower():
-                        day_type = DayType.WEEKEND
-
-                    schedules.append(
-                        StationSchedule(
-                            station_id=station_id,
-                            direction_station_id=direction,
-                            day_type=day_type,
-                            entries=entries,
-                        )
-                    )
-            else:
-                debug_text = prev.get_text()[:100] if prev else "No header found"
-                print(f"    Warning: Could not determine direction from text: {debug_text}")
-
-        return schedules
-
-    def _parse_schedule_table(self, table) -> list[ScheduleEntry]:
-        """Parse schedule entries from HTML table."""
-        entries = []
-        rows = table.find_all("tr")
-
-        for row in rows:
-            cells = row.find_all(["td", "th"])
-            if len(cells) < 2:
-                continue
-
-            hour_text = cells[0].get_text(strip=True)
-            hour_match = re.match(r"(\d+):?", hour_text)
-            if not hour_match:
-                continue
-
-            try:
-                hour = int(hour_match.group(1))
-            except ValueError:
-                continue
-
-            for cell in cells[1:]:
-                minute_text = cell.get_text(strip=True)
-                if not minute_text or minute_text == "&nbsp;":
-                    continue
-
-                minute_match = re.search(r"(\d+)", minute_text)
-                if minute_match:
-                    try:
-                        minutes = int(minute_match.group(1))
-                        if 0 <= minutes < 60:
-                            entries.append(ScheduleEntry(hour=hour, minutes=minutes))
-                    except ValueError:
-                        continue
-
-        return entries
-
-    @lru_cache(maxsize=128)
-    def _find_station_id_by_name(self, name: str) -> str | None:
-        """Find station ID by Ukrainian name."""
-        name_lower = name.lower().strip()
-
-        if name_lower in _STATION_NAME_TO_ID:
-            return _STATION_NAME_TO_ID[name_lower]
-
-        normalized = name_lower.replace("'", "").replace("«", "").replace("»", "").strip()
-        if normalized in _STATION_NAME_TO_ID:
-            return _STATION_NAME_TO_ID[normalized]
-
-        for station_name, station_id in _STATION_NAME_TO_ID.items():
-            if name_lower in station_name or station_name in name_lower:
-                return station_id
-
-        print(f"      Could not find station ID for: '{name}'")
-        return None
+        return _parse_station_schedule(html, station_url, station_id)
 
     def _fetch_station_schedule_task(self, station: dict) -> tuple[str, list[StationSchedule]]:
         """Task for fetching a single station schedule."""

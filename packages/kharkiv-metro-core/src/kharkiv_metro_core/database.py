@@ -68,6 +68,46 @@ class MetroDatabase:
 
             conn.commit()
 
+    @staticmethod
+    def _rows_to_entries(rows: list[sqlite3.Row]) -> list[ScheduleEntry]:
+        return [ScheduleEntry(hour=r["hour"], minutes=r["minutes"]) for r in rows]
+
+    @staticmethod
+    def _schedule_key(schedule: StationSchedule) -> tuple[str, str, str]:
+        return schedule.station_id, schedule.direction_station_id, schedule.day_type.value
+
+    def _delete_schedule(self, cursor, schedule: StationSchedule) -> None:
+        cursor.execute(
+            """
+            DELETE FROM schedules
+            WHERE station_id = ? AND direction_station_id = ? AND day_type = ?
+        """,
+            self._schedule_key(schedule),
+        )
+
+    def _insert_schedule_entries(self, cursor, schedule: StationSchedule) -> int:
+        if not schedule.entries:
+            return 0
+
+        cursor.executemany(
+            """
+            INSERT INTO schedules
+            (station_id, direction_station_id, day_type, hour, minutes)
+            VALUES (?, ?, ?, ?, ?)
+        """,
+            [
+                (
+                    schedule.station_id,
+                    schedule.direction_station_id,
+                    schedule.day_type.value,
+                    entry.hour,
+                    entry.minutes,
+                )
+                for entry in schedule.entries
+            ],
+        )
+        return len(schedule.entries)
+
     def save_stations(self, stations: list[dict]) -> None:
         """Save stations to database using batch insert."""
         if not stations:
@@ -102,40 +142,8 @@ class MetroDatabase:
         """Save schedule entries to database."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-
-            # Delete existing entries for this schedule
-            cursor.execute(
-                """
-                DELETE FROM schedules
-                WHERE station_id = ? AND direction_station_id = ? AND day_type = ?
-            """,
-                (
-                    schedule.station_id,
-                    schedule.direction_station_id,
-                    schedule.day_type.value,
-                ),
-            )
-
-            # Batch insert for better performance (Pattern 16)
-            if schedule.entries:
-                cursor.executemany(
-                    """
-                    INSERT INTO schedules
-                    (station_id, direction_station_id, day_type, hour, minutes)
-                    VALUES (?, ?, ?, ?, ?)
-                """,
-                    [
-                        (
-                            schedule.station_id,
-                            schedule.direction_station_id,
-                            schedule.day_type.value,
-                            entry.hour,
-                            entry.minutes,
-                        )
-                        for entry in schedule.entries
-                    ],
-                )
-
+            self._delete_schedule(cursor, schedule)
+            self._insert_schedule_entries(cursor, schedule)
             conn.commit()
 
     def save_schedules(self, schedules: list[StationSchedule]) -> int:
@@ -148,39 +156,8 @@ class MetroDatabase:
             count = 0
 
             for schedule in schedules:
-                # Delete existing entries for this schedule
-                cursor.execute(
-                    """
-                    DELETE FROM schedules
-                    WHERE station_id = ? AND direction_station_id = ? AND day_type = ?
-                """,
-                    (
-                        schedule.station_id,
-                        schedule.direction_station_id,
-                        schedule.day_type.value,
-                    ),
-                )
-
-                # Batch insert entries
-                if schedule.entries:
-                    cursor.executemany(
-                        """
-                        INSERT INTO schedules
-                        (station_id, direction_station_id, day_type, hour, minutes)
-                        VALUES (?, ?, ?, ?, ?)
-                    """,
-                        [
-                            (
-                                schedule.station_id,
-                                schedule.direction_station_id,
-                                schedule.day_type.value,
-                                entry.hour,
-                                entry.minutes,
-                            )
-                            for entry in schedule.entries
-                        ],
-                    )
-                    count += len(schedule.entries)
+                self._delete_schedule(cursor, schedule)
+                count += self._insert_schedule_entries(cursor, schedule)
 
             conn.commit()
             return count
@@ -208,7 +185,7 @@ class MetroDatabase:
             if not rows:
                 return None
 
-            entries = [ScheduleEntry(hour=r["hour"], minutes=r["minutes"]) for r in rows]
+            entries = self._rows_to_entries(rows)
 
             return StationSchedule(
                 station_id=station_id,
@@ -249,7 +226,7 @@ class MetroDatabase:
             )
 
             rows = cursor.fetchall()
-            return [ScheduleEntry(hour=r["hour"], minutes=r["minutes"]) for r in rows]
+            return self._rows_to_entries(rows)
 
     def get_all_schedules_for_station(self, station_id: str, day_type: DayType) -> list[StationSchedule]:
         """Get all schedules (all directions) for a station using single query."""

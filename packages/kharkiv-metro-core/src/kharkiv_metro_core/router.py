@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import datetime as dt
-from datetime import datetime, timedelta
 
 from .config import Config
 from .database import MetroDatabase
@@ -30,6 +29,7 @@ class MetroRouter:
         config = Config()
         self.db = db or MetroDatabase(config.get_db_path())
         self.graph = graph or get_metro_graph()
+        self._line_terminals: dict[Line, tuple[str, str]] | None = None
 
     @property
     def stations(self) -> dict[str, Station]:
@@ -73,7 +73,7 @@ class MetroRouter:
         self,
         from_station_id: str,
         to_station_id: str,
-        departure_time: datetime,
+        departure_time: dt.datetime,
         num_options: int = 3,
     ) -> list[Route]:
         """Find multiple route options."""
@@ -95,7 +95,7 @@ class MetroRouter:
                 break
 
             # Try 10 minutes later
-            current_time = current_time + timedelta(minutes=10)
+            current_time = current_time + dt.timedelta(minutes=10)
             try:
                 alt_route = self.find_route(from_station_id, to_station_id, current_time, day_type)
 
@@ -109,7 +109,7 @@ class MetroRouter:
     def _build_route_with_schedule(
         self,
         path: list[str],
-        start_time: datetime,
+        start_time: dt.datetime,
         day_type: DayType,
     ) -> Route:
         """Build route with schedule-based timing."""
@@ -124,14 +124,14 @@ class MetroRouter:
         segments: list[RouteSegment] = []
         num_transfers = 0
 
-        current_time: datetime = start_time
+        current_time: dt.datetime = start_time
         current_line: Line | None = None
         direction: str | None = None
 
         # Local variables for faster access (Pattern 9)
         stations = self.stations
         db = self.db
-        timedelta_minutes = timedelta
+        timedelta_minutes = dt.timedelta
 
         for i in range(len(path) - 1):
             from_id = path[i]
@@ -180,7 +180,7 @@ class MetroRouter:
 
                     if next_departures:
                         departure = next_departures[0]
-                        departure_dt = datetime.combine(current_time.date(), departure.time, current_time.tzinfo)
+                        departure_dt = dt.datetime.combine(current_time.date(), departure.time, current_time.tzinfo)
                         if departure_dt < current_time:
                             departure_dt += timedelta_minutes(days=1)
                         current_time = departure_dt
@@ -190,7 +190,7 @@ class MetroRouter:
 
                 # Calculate travel time based on arrival at next station
                 # Try to find when a train arrives at the next station heading same direction
-                arrival_time: datetime | None = None
+                arrival_time: dt.datetime | None = None
                 if direction:
                     arrival_time = self._calculate_arrival_time(to_id, direction, day_type, current_time)
 
@@ -235,8 +235,8 @@ class MetroRouter:
         station_id: str,
         direction: str,
         day_type: DayType,
-        after_time: datetime,
-    ) -> datetime | None:
+        after_time: dt.datetime,
+    ) -> dt.datetime | None:
         """Calculate arrival time at station based on schedule.
 
         Looks up when a train arrives at the given station heading in the specified direction.
@@ -255,9 +255,9 @@ class MetroRouter:
         if arrivals:
             arrival = arrivals[0]
             # Preserve timezone from after_time - create new datetime with proper tzinfo
-            arrival_dt = datetime.combine(after_time.date(), arrival.time, after_time.tzinfo)
+            arrival_dt = dt.datetime.combine(after_time.date(), arrival.time, after_time.tzinfo)
             if arrival_dt < after_time:
-                arrival_dt += timedelta(days=1)
+                arrival_dt += dt.timedelta(days=1)
             return arrival_dt
 
         return None
@@ -267,6 +267,9 @@ class MetroRouter:
 
         Returns dict mapping line to (first_terminal_id, last_terminal_id).
         """
+        if self._line_terminals is not None:
+            return self._line_terminals
+
         terminals: dict[Line, tuple[str, str]] = {}
 
         for line in [Line.KHOLODNOHIRSKO_ZAVODSKA, Line.SALTIVSKA, Line.OLEKSIIVSKA]:
@@ -278,6 +281,7 @@ class MetroRouter:
                 last_terminal = next(sid for sid, order in line_stations if order == max_order)
                 terminals[line] = (first_terminal, last_terminal)
 
+        self._line_terminals = terminals
         return terminals
 
     def _find_terminal_in_path_fast(
@@ -324,9 +328,9 @@ class MetroRouter:
         line_terminals = self._get_line_terminals()
         return self._find_terminal_in_path_fast(path, start_idx, line, line_terminals)
 
-    def _get_day_type(self, dt: datetime) -> DayType:
+    def _get_day_type(self, current_dt: dt.datetime) -> DayType:
         """Determine if date is weekday or weekend."""
-        if dt.weekday() >= 5:
+        if current_dt.weekday() >= 5:
             return DayType.WEEKEND
         return DayType.WEEKDAY
 
@@ -356,7 +360,7 @@ class MetroRouter:
     ) -> list[StationSchedule]:
         """Get schedule for a station."""
         if day_type is None:
-            day_type = self._get_day_type(datetime.now(Config.TIMEZONE))
+            day_type = self._get_day_type(dt.datetime.now(Config.TIMEZONE))
 
         if direction_id:
             schedule = self.db.get_station_schedule(station_id, direction_id, day_type)

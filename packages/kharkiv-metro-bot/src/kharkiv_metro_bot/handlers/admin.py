@@ -1,9 +1,9 @@
-"""Admin handlers for analytics and bot management."""
+"""Admin handlers for user data and bot management."""
 
 from aiogram import Dispatcher, types
 from aiogram.filters import Command
 
-from ..analytics import get_admin_id, get_analytics_db, is_analytics_enabled
+from ..user_data import get_admin_id, get_user_data_db, is_user_data_enabled
 
 
 def is_admin(user_id: int) -> bool:
@@ -24,13 +24,13 @@ async def cmd_stats(message: types.Message):
         )
         return
 
-    if not is_analytics_enabled():
-        await message.answer("📊 Analytics is currently disabled.")
+    if not is_user_data_enabled():
+        await message.answer("📊 User data is currently disabled.")
         return
 
-    db = get_analytics_db()
+    db = get_user_data_db()
     if db is None:
-        await message.answer("❌ Analytics database not initialized.")
+        await message.answer("❌ User data database not initialized.")
         return
 
     stats = db.get_stats()
@@ -43,7 +43,7 @@ async def cmd_stats(message: types.Message):
     feature_text = "\n".join(feature_lines) if feature_lines else "  No data yet"
 
     response = (
-        f"📊 <b>Bot Analytics</b>\n\n"
+        f"📊 <b>Bot Statistics</b>\n\n"
         f"<b>Users:</b>\n"
         f"  • Total unique: {stats['total_users']}\n"
         f"  • Active today: {stats['active_today']}\n"

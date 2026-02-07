@@ -8,7 +8,6 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from dotenv import load_dotenv
 
-from kharkiv_metro_bot.analytics import is_analytics_enabled, track_user
 from kharkiv_metro_bot.handlers import (
     register_admin_handlers,
     register_common_handlers,
@@ -17,15 +16,17 @@ from kharkiv_metro_bot.handlers import (
     register_stations_handlers,
 )
 from kharkiv_metro_bot.handlers.common import set_bot_commands
+from kharkiv_metro_bot.handlers.route import restore_pending_reminders
 from kharkiv_metro_bot.middleware.i18n_middleware import I18nMiddleware
+from kharkiv_metro_bot.user_data import is_user_data_enabled, track_user
 
 # Load .env from current working directory
 load_dotenv()
 
 
-# Analytics middleware
-class AnalyticsMiddleware:
-    """Middleware to track all user interactions."""
+# User data middleware
+class UserDataMiddleware:
+    """Middleware to track user interactions."""
 
     def __init__(self):
         self.feature_map = {
@@ -38,7 +39,7 @@ class AnalyticsMiddleware:
         }
 
     async def __call__(self, handler, event, data):
-        if is_analytics_enabled() and hasattr(event, "from_user") and event.from_user:
+        if is_user_data_enabled() and hasattr(event, "from_user") and event.from_user:
             # Determine feature from message text or callback
             feature = "interaction"
             if hasattr(event, "text") and event.text:
@@ -76,11 +77,11 @@ async def main() -> None:
     """Run the bot."""
     print("Starting bot...")
 
-    # Show analytics status
-    if is_analytics_enabled():
-        print("Analytics: Enabled")
+    # Show user data status
+    if is_user_data_enabled():
+        print("User data: Enabled")
     else:
-        print("Analytics: Disabled")
+        print("User data: Disabled")
 
     bot = Bot(token=get_token())
     dp = Dispatcher(storage=MemoryStorage())
@@ -88,12 +89,13 @@ async def main() -> None:
     # Add middleware
     dp.message.middleware(I18nMiddleware())
     dp.callback_query.middleware(I18nMiddleware())
-    if is_analytics_enabled():
-        dp.message.middleware(AnalyticsMiddleware())
-        dp.callback_query.middleware(AnalyticsMiddleware())
+    if is_user_data_enabled():
+        dp.message.middleware(UserDataMiddleware())
+        dp.callback_query.middleware(UserDataMiddleware())
 
     register_handlers(dp)
     await set_bot_commands(bot)
+    await restore_pending_reminders(bot)
 
     try:
         await dp.start_polling(bot)

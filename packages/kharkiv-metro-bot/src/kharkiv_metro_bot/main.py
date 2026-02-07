@@ -1,11 +1,13 @@
 """Telegram bot entry point."""
 
 import asyncio
+import logging
 import os
 import sys
+from datetime import timedelta
 
 from aiogram import Bot, Dispatcher
-from aiogram.fsm.storage.memory import MemoryStorage
+from .storage import SqliteStorage
 from dotenv import load_dotenv
 
 from kharkiv_metro_bot.handlers import (
@@ -18,7 +20,9 @@ from kharkiv_metro_bot.handlers import (
 from kharkiv_metro_bot.handlers.common import set_bot_commands
 from kharkiv_metro_bot.handlers.route import restore_pending_reminders
 from kharkiv_metro_bot.middleware.i18n_middleware import I18nMiddleware
-from kharkiv_metro_bot.user_data import is_user_data_enabled, track_user
+from kharkiv_metro_bot.user_data import cleanup_expired_reminders, is_user_data_enabled, track_user
+
+logger = logging.getLogger(__name__)
 
 # Load .env from current working directory
 load_dotenv()
@@ -57,6 +61,7 @@ def get_token() -> str:
     """Get bot token from environment."""
     token = os.getenv("BOT_TOKEN")
     if not token:
+        logger.error("BOT_TOKEN not found in environment")
         raise ValueError("BOT_TOKEN not found in .env file")
     return token
 
@@ -73,18 +78,35 @@ def register_handlers(dp: Dispatcher) -> None:
     register_common_handlers(dp)
 
 
+async def _cleanup_expired_reminders_task() -> None:
+    while True:
+        await asyncio.sleep(3600)
+        try:
+            cleaned = cleanup_expired_reminders()
+            if cleaned:
+                logger.info("Deactivated %s expired reminders", cleaned)
+        except Exception as exc:
+            logger.exception("Failed to cleanup reminders: %s", exc)
+
+
 async def main() -> None:
     """Run the bot."""
-    print("Starting bot...")
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.getLogger("aiogram.event").setLevel(logging.WARNING)
+    logger.info("Starting bot...")
 
     # Show user data status
     if is_user_data_enabled():
-        print("User data: Enabled")
+        logger.info("User data: Enabled")
     else:
-        print("User data: Disabled")
+        logger.warning("User data: Disabled")
 
     bot = Bot(token=get_token())
-    dp = Dispatcher(storage=MemoryStorage())
+    storage = SqliteStorage.from_user_data_db()
+    removed = storage.cleanup_stale_states(timedelta(hours=12))
+    if removed:
+        logger.info("Removed %s stale sessions", removed)
+    dp = Dispatcher(storage=storage)
 
     # Add middleware
     dp.message.middleware(I18nMiddleware())
@@ -97,9 +119,12 @@ async def main() -> None:
     await set_bot_commands(bot)
     await restore_pending_reminders(bot)
 
+    cleanup_task = asyncio.create_task(_cleanup_expired_reminders_task())
+
     try:
         await dp.start_polling(bot)
     finally:
+        cleanup_task.cancel()
         await bot.session.close()
 
 
@@ -108,9 +133,9 @@ def main_sync() -> None:
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\nBot stopped by user")
+        logger.info("Bot stopped by user")
     except Exception as e:
-        print(f"Fatal error: {e}")
+        logger.exception("Fatal error: %s", e)
         sys.exit(1)
 
 

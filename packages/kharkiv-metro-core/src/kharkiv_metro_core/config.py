@@ -35,7 +35,6 @@ class Config:
     """Configuration manager using XDG directories."""
 
     TIMEZONE: ZoneInfo = ZoneInfo(os.getenv("TZ", "Europe/Kyiv"))
-    LINE_ORDER: list[str] = ["Холодногірсько-заводська", "Салтівська", "Олексіївська"]
 
     def __init__(self) -> None:
         self.config_dir = self._get_config_dir()
@@ -128,6 +127,10 @@ class Config:
         """Get database path based on configuration."""
         if cli_override:
             return cli_override
+
+        env_path = os.getenv("METRO_DB_PATH")
+        if env_path:
+            return os.path.expanduser(env_path)
 
         auto = self.get("database.auto", True)
         if auto:

@@ -2,49 +2,43 @@
 
 from typing import Final
 
-from kharkiv_metro_core import Config
+from kharkiv_metro_core import Config, get_line_display_by_internal, load_metro_data
 
 # Get config values
 _config = Config()
 TIMEZONE = Config.TIMEZONE
-LINE_ORDER = Config.LINE_ORDER
 DB_PATH = _config.get_db_path()
+LINE_ORDER = [
+    get_line_display_by_internal(line_key, "ua")
+    for line_key in load_metro_data().line_order
+]
 
 # Line mappings
-LINE_DISPLAY_TO_INTERNAL: Final[dict[str, str]] = {
-    "🔴 Холодногірсько-Заводська": "Холодногірсько-заводська",
-    "🔵 Салтівська": "Салтівська",
-    "🟢 Олексіївська": "Олексіївська",
-}
-
+_metro_data = load_metro_data()
 LINE_INTERNAL_TO_DISPLAY: Final[dict[str, str]] = {
-    "Холодногірсько-заводська": "🔴 Холодногірсько-Заводська",
-    "Салтівська": "🔵 Салтівська",
-    "Олексіївська": "🟢 Олексіївська",
+    meta["name_ua"]: get_line_display_by_internal(meta["name_ua"], "ua")
+    for meta in _metro_data.line_meta.values()
 }
 
 # Emoji mappings
 LINE_COLOR_EMOJI: Final[dict[str, str]] = {
-    "red": "🔴",
-    "blue": "🔵",
-    "green": "🟢",
+    meta["color"]: meta["emoji"]
+    for meta in _metro_data.line_meta.values()
 }
 
 LINE_NAME_EMOJI: Final[dict[str, str]] = {
-    "Холодногірсько-заводська": "🔴",
-    "Салтівська": "🔵",
-    "Олексіївська": "🟢",
+    meta["name_ua"]: meta["emoji"]
+    for meta in _metro_data.line_meta.values()
 }
 
 # Day type mappings
 DAY_TYPE_DISPLAY_TO_INTERNAL: Final[dict[str, str]] = {
-    "📅 Будні": "weekday",
-    "🎉 Вихідні": "weekend",
+    f"{meta['emoji']} {meta['name_ua']}": key
+    for key, meta in _metro_data.day_types.items()
 }
 
 DAY_TYPE_INTERNAL_TO_DISPLAY: Final[dict[str, str]] = {
-    "weekday": "📅 Будні",
-    "weekend": "🎉 Вихідні",
+    key: f"{meta['emoji']} {meta['name_ua']}" for key, meta in _metro_data.day_types.items()
 }
 
 

@@ -2,6 +2,8 @@
 
 from typing import Literal
 
+from .data_loader import load_metro_data
+
 Language = Literal["ua", "en"]
 
 DEFAULT_LANGUAGE: Language = "ua"
@@ -62,6 +64,15 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "error_route_not_found": "❌ Маршрут не знайдено\nСпробуйте інші станції.",
         "error_metro_closed": "❌ Метро закрите та/або на останній потяг неможливо встигнути\nСпробуйте інший час або день.",
         "error_reminder_time_passed": "❌ Час вже пройшов, нагадування неможливо встановити",
+        # Admin
+        "user_data_disabled": "📊 Збір даних користувачів вимкнено.",
+        "stats_title": "📊 <b>Статистика бота</b>",
+        "stats_users": "Користувачі:",
+        "stats_users_total": "  • Всього унікальних: {count}",
+        "stats_users_active_today": "  • Активних сьогодні: {count}",
+        "stats_users_active_week": "  • Активних цього тижня: {count}",
+        "stats_features": "Використання функцій:",
+        "stats_no_data": "  • Даних ще немає",
         "error_generic": "❌ Помилка: {error}\nСпробуйте ще раз через /route",
         "error_cancelled": "❌ Побудову маршруту скасовано",
         # Reminders
@@ -69,7 +80,9 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "reminder_cancelled": "❌ Нагадування скасовано!",
         "reminder_exit_prepare": "⏰ Готуйтесь виходити на наступній станції: {station}",
         "reminder_button": "⏰ Вихід на {station}",
+        "reminder_button_default": "⏰ Вихід",
         "reminder_cancel_button": "❌ Скасувати нагадування на {time}",
+        "reminder_set_short": "✅",
         # Outdated
         "outdated_button": "❌ Ця кнопка застаріла. Будь ласка, побудуйте маршрут знову.",
         "error_invalid_data": "❌ Помилка: неправильний формат даних",
@@ -83,12 +96,6 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "cmd_about": "Про бота",
         "cmd_language": "Змінити мову",
         # Lines (for display)
-        "line_red": "🔴 Холодногірсько-Заводська",
-        "line_blue": "🔵 Салтівська",
-        "line_green": "🟢 Олексіївська",
-        "line_red_short": "Холодногірсько-заводська",
-        "line_blue_short": "Салтівська",
-        "line_green_short": "Олексіївська",
         # Language selection
         "select_language": "🌐 Оберіть мову / Select language:",
         "language_set": "✅ Мову змінено на Українську",
@@ -170,6 +177,15 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "error_route_not_found": "❌ Route not found\nPlease try other stations.",
         "error_metro_closed": "❌ Metro is closed and/or you cannot catch the last train\nPlease try another time or day.",
         "error_reminder_time_passed": "❌ Time has already passed, reminder cannot be set",
+        # Admin
+        "user_data_disabled": "📊 User data collection is disabled.",
+        "stats_title": "📊 <b>Bot Statistics</b>",
+        "stats_users": "Users:",
+        "stats_users_total": "  • Total unique: {count}",
+        "stats_users_active_today": "  • Active today: {count}",
+        "stats_users_active_week": "  • Active this week: {count}",
+        "stats_features": "Feature Usage:",
+        "stats_no_data": "  • No data yet",
         "error_generic": "❌ Error: {error}\nPlease try again via /route",
         "error_cancelled": "❌ Route planning cancelled",
         # Reminders
@@ -177,7 +193,9 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "reminder_cancelled": "❌ Reminder cancelled!",
         "reminder_exit_prepare": "⏰ Get ready to exit at the next station: {station}",
         "reminder_button": "⏰ Exit at {station}",
+        "reminder_button_default": "⏰ Exit",
         "reminder_cancel_button": "❌ Cancel reminder at {time}",
+        "reminder_set_short": "✅",
         # Outdated
         "outdated_button": "❌ This button is outdated. Please rebuild your route.",
         "error_invalid_data": "❌ Error: invalid data format",
@@ -191,12 +209,6 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
         "cmd_about": "About the bot",
         "cmd_language": "Change language",
         # Lines (for display)
-        "line_red": "🔴 Kholodnohirsko-Zavodska",
-        "line_blue": "🔵 Saltivska",
-        "line_green": "🟢 Oleksiivska",
-        "line_red_short": "Kholodnohirsko-Zavodska",
-        "line_blue_short": "Saltivska",
-        "line_green_short": "Oleksiivska",
         # Language selection
         "select_language": "🌐 Select language / Оберіть мову:",
         "language_set": "✅ Language changed to English",
@@ -226,19 +238,17 @@ TRANSLATIONS: dict[Language, dict[str, str]] = {
     },
 }
 
-LINE_INTERNAL_NAMES: dict[str, str] = {
-    "kholodnohirsko_zavodska": "Холодногірсько-заводська",
-    "saltivska": "Салтівська",
-    "oleksiivska": "Олексіївська",
-}
 
-LINE_DISPLAY_TEXT_KEYS: dict[str, dict[str, str]] = {
-    "kholodnohirsko_zavodska": {"full": "line_red", "short": "line_red_short"},
-    "saltivska": {"full": "line_blue", "short": "line_blue_short"},
-    "oleksiivska": {"full": "line_green", "short": "line_green_short"},
-}
+def _build_line_internal_names() -> dict[str, str]:
+    metro_data = load_metro_data()
+    return {key: meta["name_ua"] for key, meta in metro_data.line_meta.items()}
 
-INTERNAL_LINE_NAME_TO_KEY: dict[str, str] = {name: key for key, name in LINE_INTERNAL_NAMES.items()}
+
+LINE_META: dict[str, dict[str, str]] = load_metro_data().line_meta
+LINE_INTERNAL_NAMES: dict[str, str] = _build_line_internal_names()
+INTERNAL_LINE_NAME_TO_KEY: dict[str, str] = {
+    meta["name_ua"]: key for key, meta in LINE_META.items()
+}
 
 
 def get_text(key: str, lang: Language = DEFAULT_LANGUAGE, **kwargs) -> str:
@@ -271,10 +281,11 @@ def get_line_display_name(line_key: str, lang: Language = DEFAULT_LANGUAGE) -> s
     Returns:
         Display name with emoji
     """
-    mapping = LINE_DISPLAY_TEXT_KEYS.get(line_key)
-    if not mapping:
+    line_meta = LINE_META.get(line_key)
+    if not line_meta:
         return line_key
-    return get_text(mapping["full"], lang)
+    display_key = "display_ua" if lang == "ua" else "display_en"
+    return line_meta.get(display_key, line_key)
 
 
 def get_line_short_name(line_key: str, lang: Language = DEFAULT_LANGUAGE) -> str:
@@ -287,10 +298,11 @@ def get_line_short_name(line_key: str, lang: Language = DEFAULT_LANGUAGE) -> str
     Returns:
         Short display name
     """
-    mapping = LINE_DISPLAY_TEXT_KEYS.get(line_key)
-    if not mapping:
+    line_meta = LINE_META.get(line_key)
+    if not line_meta:
         return line_key
-    return get_text(mapping["short"], lang)
+    name = line_meta.get("name_ua") if lang == "ua" else line_meta.get("name_en")
+    return name or line_key
 
 
 def get_line_display_by_internal(internal_name: str, lang: Language = DEFAULT_LANGUAGE) -> str:
@@ -311,11 +323,12 @@ def get_line_display_by_internal(internal_name: str, lang: Language = DEFAULT_LA
 
 def _build_line_display_to_internal(lang: Language) -> dict[str, str]:
     return {
-        get_text(keys["full"], lang): LINE_INTERNAL_NAMES[line_key] for line_key, keys in LINE_DISPLAY_TEXT_KEYS.items()
+        get_line_display_name(line_key, lang): LINE_INTERNAL_NAMES[line_key]
+        for line_key in LINE_META.keys()
     }
 
 
-# Reverse mapping: display name -> internal name
+# Reverse mapping: display name -> internal line name
 LINE_DISPLAY_TO_INTERNAL_I18N: dict[Language, dict[str, str]] = {
     "ua": _build_line_display_to_internal("ua"),
     "en": _build_line_display_to_internal("en"),
@@ -329,27 +342,35 @@ LINE_DISPLAY_TO_INTERNAL: dict[str, str] = {
 
 
 def parse_line_display_name(display_name: str, lang: Language = DEFAULT_LANGUAGE) -> str | None:
-    """Parse display line name to internal name.
+    """Parse display line name to internal line name or line key.
 
     Args:
         display_name: Display name with emoji (e.g., "🔴 Холодногірсько-Заводська")
         lang: Language code
 
     Returns:
-        Internal line name or None if not found
+        Internal line name or line key, or None if not found
     """
-    return LINE_DISPLAY_TO_INTERNAL_I18N.get(lang, {}).get(display_name)
+    internal_name = LINE_DISPLAY_TO_INTERNAL_I18N.get(lang, {}).get(display_name)
+    if internal_name:
+        return internal_name
+    fallback_lang = "en" if lang == "ua" else "ua"
+    internal_name = LINE_DISPLAY_TO_INTERNAL_I18N.get(fallback_lang, {}).get(display_name)
+    if internal_name:
+        return internal_name
+    line_key = INTERNAL_LINE_NAME_TO_KEY.get(display_name)
+    return line_key or LINE_DISPLAY_TO_INTERNAL.get(display_name)
 
 
 # Day type reverse mapping
+DAY_TYPE_META: dict[str, dict[str, str]] = load_metro_data().day_types
+
 DAY_TYPE_DISPLAY_TO_INTERNAL_I18N: dict[Language, dict[str, str]] = {
     "ua": {
-        "📅 Будні": "weekday",
-        "🎉 Вихідні": "weekend",
+        f"{meta['emoji']} {meta['name_ua']}": key for key, meta in DAY_TYPE_META.items()
     },
     "en": {
-        "📅 Weekdays": "weekday",
-        "🎉 Weekends": "weekend",
+        f"{meta['emoji']} {meta['name_en']}": key for key, meta in DAY_TYPE_META.items()
     },
 }
 

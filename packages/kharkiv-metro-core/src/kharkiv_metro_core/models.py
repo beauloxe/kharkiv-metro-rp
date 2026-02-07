@@ -6,6 +6,8 @@ import datetime as dt
 from dataclasses import dataclass, field
 from enum import Enum
 
+from .data_loader import load_metro_data
+
 
 class DayType(Enum):
     """Type of day for schedule."""
@@ -23,30 +25,18 @@ class Line(Enum):
 
     @property
     def display_name_ua(self) -> str:
-        names = {
-            Line.KHOLODNOHIRSKO_ZAVODSKA: "Холодногірсько-заводська",
-            Line.SALTIVSKA: "Салтівська",
-            Line.OLEKSIIVSKA: "Олексіївська",
-        }
-        return names[self]
+        metro_data = load_metro_data()
+        return metro_data.line_meta[self.value]["name_ua"]
 
     @property
     def display_name_en(self) -> str:
-        names = {
-            Line.KHOLODNOHIRSKO_ZAVODSKA: "Kholodnohirsko-Zavodska",
-            Line.SALTIVSKA: "Saltivska",
-            Line.OLEKSIIVSKA: "Oleksiivska",
-        }
-        return names[self]
+        metro_data = load_metro_data()
+        return metro_data.line_meta[self.value]["name_en"]
 
     @property
     def color(self) -> str:
-        colors = {
-            Line.KHOLODNOHIRSKO_ZAVODSKA: "red",
-            Line.SALTIVSKA: "blue",
-            Line.OLEKSIIVSKA: "green",
-        }
-        return colors[self]
+        metro_data = load_metro_data()
+        return metro_data.line_meta[self.value]["color"]
 
 
 @dataclass(slots=True)
@@ -183,81 +173,6 @@ class Route:
         }
 
 
-# Define metro network structure
-# Line 1: Kholodnohirsko-Zavodska (Red)
-LINE_1_STATIONS = [
-    ("kholodna_hora", "Холодна гора", "Kholodna Hora"),
-    ("vokzalna", "Вокзальна", "Vokzalna"),
-    ("tsentralnyi_rynok", "Центральний ринок", "Tsentralnyi Rynok"),
-    ("maidan_konstytutsii", "Майдан Конституції", "Maidan Konstytutsii"),
-    ("levada", "Левада", "Levada"),
-    ("sportyvna", "Спортивна", "Sportyvna"),
-    ("zavodska", "Заводська", "Zavodska"),
-    ("turboatom", "Турбоатом", "Turboatom"),
-    ("palats_sportu", "Палац спорту", "Palats Sportu"),
-    ("armiiska", "Армійська", "Armiiska"),
-    ("maselskoho", "Ім. О.С. Масельського", "Im. O.S. Maselskoho"),
-    ("traktornyi_zavod", "Тракторний завод", "Traktornyi Zavod"),
-    ("industrialna", "Індустріальна", "Industrialna"),
-]
-
-# Line 2: Saltivska (Blue)
-LINE_2_STATIONS = [
-    ("istorychnyi_muzei", "Історичний музей", "Istorychnyi Muzei"),
-    ("university", "Університет", "Universytet"),
-    ("yaroslava_mudroho", "Ярослава Мудрого", "Yaroslava Mudroho"),
-    ("kyivska", "Київська", "Kyivska"),
-    ("barabashova", "Академіка Барабашова", "Akademika Barabashova"),
-    ("pavlova", "Академіка Павлова", "Akademika Pavlova"),
-    ("studentska", "Студентська", "Studentska"),
-    ("saltivska", "Салтівська", "Saltivska"),
-]
-
-# Line 3: Oleksiivska (Green)
-LINE_3_STATIONS = [
-    ("metrobudivnykiv", "Метробудівників", "Metrobudivnykiv"),
-    ("zakhysnykiv_ukrainy", "Захисників України", "Zakhysnykiv Ukrainy"),
-    ("beketova", "Архітектора Бекетова", "Arkhitektora Beketova"),
-    ("derzhprom", "Держпром", "Derzhprom"),
-    ("naukova", "Наукова", "Naukova"),
-    ("botanichnyi_sad", "Ботанічний сад", "Botanichnyi Sad"),
-    ("23_serpnia", "23 Серпня", "23 Serpnia"),
-    ("oleksiivska", "Олексіївська", "Oleksiivska"),
-    ("peremoha", "Перемога", "Peremoha"),
-]
-
-# Transfer stations (station_id -> transfer_to_station_id)
-TRANSFERS = {
-    "maidan_konstytutsii": "istorychnyi_muzei",
-    "istorychnyi_muzei": "maidan_konstytutsii",
-    "sportyvna": "metrobudivnykiv",
-    "metrobudivnykiv": "sportyvna",
-    "university": "derzhprom",
-    "derzhprom": "university",
-}
-
-# Alias station names -> actual station names (for backward compatibility)
-ALIAS_STATION_NAMES = {
-    # Ukrainian old names
-    "героїв праці": "Салтівська",
-    "проспект гагаріна": "Левада",
-    "пушкінська": "Ярослава Мудрого",
-    "завод імені малишева": "Заводська",
-    "південний вокзал": "Вокзальна",
-    # Aliases
-    "23": "23 Серпня",
-    "барабашова": "Академіка Барабашова",
-    "бекетова": "Архітектора Бекетова",
-    "ботсад": "Ботанічний сад",
-    "гагаріна": "Левада",
-    "масельського": "Ім. О.С. Масельського",
-    "павлова": "Академіка Павлова",
-    "палац": "Палац спорту",
-    "хтз": "Тракторний завод",
-    # TODO: add English old names
-}
-
-
 class MetroClosedError(Exception):
     """Raised when trying to plan a route when metro is closed."""
 
@@ -269,39 +184,26 @@ class MetroClosedError(Exception):
 
 def create_stations() -> dict[str, Station]:
     """Create all stations with their metadata."""
-    stations = {}
+    metro_data = load_metro_data()
+    stations: dict[str, Station] = {}
 
-    for order, (sid, name_ua, name_en) in enumerate(LINE_1_STATIONS, 1):
-        transfer = TRANSFERS.get(sid)
-        stations[sid] = Station(
-            id=sid,
-            name_ua=name_ua,
-            name_en=name_en,
-            line=Line.KHOLODNOHIRSKO_ZAVODSKA,
-            order=order,
-            transfer_to=transfer,
-        )
+    line_mapping = {
+        "kholodnohirsko_zavodska": Line.KHOLODNOHIRSKO_ZAVODSKA,
+        "saltivska": Line.SALTIVSKA,
+        "oleksiivska": Line.OLEKSIIVSKA,
+    }
 
-    for order, (sid, name_ua, name_en) in enumerate(LINE_2_STATIONS, 1):
-        transfer = TRANSFERS.get(sid)
-        stations[sid] = Station(
-            id=sid,
-            name_ua=name_ua,
-            name_en=name_en,
-            line=Line.SALTIVSKA,
-            order=order,
-            transfer_to=transfer,
-        )
-
-    for order, (sid, name_ua, name_en) in enumerate(LINE_3_STATIONS, 1):
-        transfer = TRANSFERS.get(sid)
-        stations[sid] = Station(
-            id=sid,
-            name_ua=name_ua,
-            name_en=name_en,
-            line=Line.OLEKSIIVSKA,
-            order=order,
-            transfer_to=transfer,
-        )
+    for line_key in metro_data.line_order:
+        line_enum = line_mapping[line_key]
+        for order, station in enumerate(metro_data.stations_by_line.get(line_key, []), 1):
+            transfer = metro_data.transfers.get(station.id)
+            stations[station.id] = Station(
+                id=station.id,
+                name_ua=station.name_ua,
+                name_en=station.name_en,
+                line=line_enum,
+                order=order,
+                transfer_to=transfer,
+            )
 
     return stations

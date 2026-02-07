@@ -12,8 +12,11 @@ import aiohttp
 from bs4 import BeautifulSoup
 
 from .models import DayType, ScheduleEntry, StationSchedule, create_stations
+from .data_loader import load_metro_data
 
-BASE_URL = "https://www.metro.kharkiv.ua"
+metro_data = load_metro_data()
+SCRAPER_CONFIG = metro_data.scraper
+BASE_URL = SCRAPER_CONFIG["base_url"]
 
 # Build station name to ID mapping
 _STATION_NAME_TO_ID: dict[str, str] = {}
@@ -23,116 +26,28 @@ for sid, station in create_stations().items():
     normalized = station.name_ua.lower().replace("'", "").replace(" «", "").replace("» ", "")
     _STATION_NAME_TO_ID[normalized] = sid
 
-# Additional mappings for renamed stations (weekend schedules)
-_STATION_NAME_TO_ID["героїв праці"] = "saltivska"  # Former "Героїв праці"
-_STATION_NAME_TO_ID["пушкінська"] = "yaroslava_mudroho"  # Former "Пушкінська"
-_STATION_NAME_TO_ID["проспект гагаріна"] = "levada"  # Former "Проспект Гагаріна"
-
-# Alternative names for stations
-_STATION_NAME_TO_ID["академіка барабашова"] = "barabashova"
-_STATION_NAME_TO_ID["барабашова"] = "barabashova"
-_STATION_NAME_TO_ID["академіка павлова"] = "pavlova"
-_STATION_NAME_TO_ID["павлова"] = "pavlova"
+# Additional mappings for aliases
+for alias, resolved in metro_data.aliases.items():
+    _STATION_NAME_TO_ID[alias] = _STATION_NAME_TO_ID.get(resolved.lower(), resolved)
 
 # URL mappings for lines
 LINE_URLS = {
-    DayType.WEEKDAY: {
-        "kholodnohirsko_zavodska": "kholodnohikrsko-zavodska-liniia/",
-        "saltivska": "saltivska-liniia/",
-        "oleksiivska": "oleksiivska-liniia/",
-    },
-    DayType.WEEKEND: {
-        "kholodnohirsko_zavodska": "kholodnohikrsko-zavodska-liniia-vykhidni-dni/",
-        "saltivska": "saltivska-liniia.html",  # Different URL pattern for weekend
-        "oleksiivska": "oleksiivska-liniia-vykhidni-dni/",
-    },
+    DayType.WEEKDAY: SCRAPER_CONFIG["line_urls"]["weekday"],
+    DayType.WEEKEND: SCRAPER_CONFIG["line_urls"]["weekend"],
 }
 
 # Direct station URLs for Line 3 (Oleksiivska) - these are not all listed on the line page
 # Note: URLs contain typos as they appear on the website
 LINE_3_STATION_URLS = {
-    DayType.WEEKDAY: {
-        "metrobudivnykiv": "stantsiia-%C2%ABmetkrobudivnykiv%C2%BB.html",  # typo: metkrobudivnykiv
-        "zakhysnykiv_ukrainy": "stantsiia-%C2%ABzakhysnykiv-ukkrainy%C2%BB.html",  # typo: ukkrainy
-        "beketova": "stantsiia-%C2%ABakrkhitektokra-beketova%C2%BB.html",  # typo: akrkhitektokra
-        "derzhprom": "stantsiia-%C2%ABdekrzhpkrom%C2%BB.html",  # typo: dekrzhpkrom
-        "naukova": "stantsiia-%C2%ABnaukova%C2%BB.html",
-        "botanichnyi_sad": "stantsiia-%C2%ABbotanichnyi-sad%C2%BB.html",
-        "23_serpnia": "stantsiia-%C2%AB23-sekrpnia%C2%BB.html",  # typo: sekrpnia
-        "oleksiivska": "stantsiia-%C2%ABoleksiivska%C2%BB.html",
-        "peremoha": "stantsiia-%C2%ABpekremoha%C2%BB.html",  # typo: pekremoha
-    },
-    DayType.WEEKEND: {
-        "metrobudivnykiv": "stantsiia-%C2%ABmetkrobudivnykiv%C2%BB-(vykhidni-dni).html",
-        "zakhysnykiv_ukrainy": "stantsiia-%C2%ABzakhysnykiv-ukkrainy%C2%BB-(vykhidni-dni).html",
-        "beketova": "stantsiia-%C2%ABakrkhitektokra-beketova%C2%BB-(vykhidni-dni).html",
-        "derzhprom": "stantsiia-%C2%ABdekrzhpkrom%C2%BB-(vykhidni-dni).html",
-        "naukova": "stantsiia-%C2%ABnaukova%C2%BB-(vykhidni-dni).html",
-        "botanichnyi_sad": "stantsiia-%C2%ABbotanichnyi-sad%C2%BB-(vykhidni-dni).html",
-        "23_serpnia": "stantsiia-%C2%AB23-sekrpnia%C2%BB-(vykhidni-dni).html",
-        "oleksiivska": "stantsiia-%C2%ABoleksiivska%C2%BB-(vykhidni-dni).html",
-        "peremoha": "stantsiia-%C2%ABpekremoha%C2%BB-(vykhidni-dni).html",
-    },
+    DayType.WEEKDAY: SCRAPER_CONFIG["line3_station_urls"]["weekday"],
+    DayType.WEEKEND: SCRAPER_CONFIG["line3_station_urls"]["weekend"],
 }
 
 # Station names mapping
-STATION_NAMES = {
-    "metrobudivnykiv": "Метробудівників",
-    "zakhysnykiv_ukrainy": "Захисників України",
-    "beketova": "Архітектора Бекетова",
-    "derzhprom": "Держпром",
-    "naukova": "Наукова",
-    "botanichnyi_sad": "Ботанічний сад",
-    "23_serpnia": "23 Серпня",
-    "oleksiivska": "Олексіївська",
-    "peremoha": "Перемога",
-}
+STATION_NAMES = SCRAPER_CONFIG["station_names"]
 
 # Station ID mappings from URL slugs
-STATION_URL_MAPPING = {
-    # Line 1
-    "kholodna-hokra": "kholodna_hora",
-    "vokzalna": "vokzalna",
-    "tsentkralnyi-krynok": "tsentralnyi_rynok",
-    "maidan-konstytutsii": "maidan_konstytutsii",
-    "levada": "levada",
-    "spokrtyvna": "sportyvna",
-    "zavodska": "zavodska",
-    "tukrboatom": "turboatom",
-    "palats-spokrtu": "palats_sportu",
-    "akrmiiska": "armiiska",
-    "im.-o.s.-maselskoho": "maselskoho",
-    "tkraktokrnyi-zavod": "traktornyi_zavod",
-    "industkrialna": "industrialna",
-    # Line 2
-    "istokrychnyi-muzei": "istorychnyi_muzei",
-    "universytet": "university",
-    "univekrsytet": "university",  # Typo in weekend URL
-    "pushkinska": "yaroslava_mudroho",
-    "yakroslava-mudkroho": "yaroslava_mudroho",  # New name on weekend
-    "kyivska": "kyivska",
-    "akademika-bakrabashova": "barabashova",
-    "akademika-pavlova": "pavlova",
-    "studentska": "studentska",
-    "heroiv-praci": "saltivska",
-    "saltivska": "saltivska",  # New name on weekend
-    # Line 3
-    "metrobudivnykiv": "metrobudivnykiv",
-    "metkrobudivnykiv": "metrobudivnykiv",  # typo version
-    "zakhysnykiv-ukrainy": "zakhysnykiv_ukrainy",
-    "zakhysnykiv-ukkrainy": "zakhysnykiv_ukrainy",  # typo version
-    "akrkhitektokra-beketova": "beketova",  # typo version
-    "derzhprom": "derzhprom",
-    "dekrzhpkrom": "derzhprom",  # typo version
-    "nauky": "naukova",
-    "naukova": "naukova",  # alternative name
-    "botanichnyi-sad": "botanichnyi_sad",
-    "23-serpnia": "23_serpnia",
-    "23-sekrpnia": "23_serpnia",  # typo version
-    "oleksiivska": "oleksiivska",
-    "peremoha": "peremoha",
-    "pekremoha": "peremoha",  # typo version
-}
+STATION_URL_MAPPING = SCRAPER_CONFIG["station_url_mapping"]
 
 
 def _extract_station_slug(href: str) -> str:

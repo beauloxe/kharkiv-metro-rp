@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from kharkiv_metro_core import DEFAULT_LANGUAGE, Config, Language
+from kharkiv_metro_core import DEFAULT_LANGUAGE, Config, Language, now
 
 # Config instance
 _config = Config()
@@ -41,6 +41,26 @@ class UserDataDatabase:
         self.db_path = db_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
+        self._ensure_fsm_table()
+
+    def _ensure_fsm_table(self) -> None:
+        """Ensure FSM storage table exists."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS fsm_state (
+                    chat_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    destiny TEXT NOT NULL,
+                    state TEXT,
+                    data TEXT,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (chat_id, user_id, destiny)
+                )
+                """
+            )
+            conn.commit()
 
     @contextmanager
     def _get_connection(self):
@@ -211,7 +231,9 @@ class UserDataDatabase:
             )
 
             conn.commit()
-            return cursor.lastrowid
+            if cursor.lastrowid is None:
+                raise RuntimeError("Failed to create reminder")
+            return int(cursor.lastrowid)
 
     def get_active_reminders(self, telegram_user_id: int) -> list[dict]:
         """Get active reminders for a user."""
@@ -270,6 +292,27 @@ class UserDataDatabase:
             )
             conn.commit()
 
+    def deactivate_expired_reminders(self, reference_time: datetime | None = None) -> int:
+        """Deactivate reminders scheduled in the past."""
+        if reference_time is None:
+            reference_time = now()
+
+        count = 0
+        reminders = self.get_all_active_reminders()
+        for reminder in reminders:
+            remind_at_raw = reminder.get("remind_at")
+            reminder_id = reminder.get("id")
+            if not remind_at_raw or reminder_id is None:
+                continue
+            try:
+                remind_at = datetime.fromisoformat(remind_at_raw)
+            except ValueError:
+                continue
+            if reference_time and remind_at <= reference_time:
+                self.deactivate_reminder(reminder_id)
+                count += 1
+        return count
+
     def get_stats(self) -> dict:
         """Get analytics statistics."""
         with self._get_connection() as conn:
@@ -278,7 +321,7 @@ class UserDataDatabase:
             cursor.execute("SELECT COUNT(*) FROM users")
             total_users = cursor.fetchone()[0]
 
-            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            today = now().replace(hour=0, minute=0, second=0, microsecond=0)
             cursor.execute(
                 """
                 SELECT COUNT(DISTINCT user_id) FROM interactions
@@ -288,7 +331,7 @@ class UserDataDatabase:
             )
             active_today = cursor.fetchone()[0]
 
-            week_ago = datetime.now() - timedelta(days=7)
+            week_ago = now() - timedelta(days=7)
             cursor.execute(
                 """
                 SELECT COUNT(DISTINCT user_id) FROM interactions
@@ -391,6 +434,14 @@ def get_all_active_reminders() -> list[dict]:
     if db:
         return db.get_all_active_reminders()
     return []
+
+
+def cleanup_expired_reminders() -> int:
+    """Deactivate expired reminders (helper function)."""
+    db = get_user_data_db()
+    if db:
+        return db.deactivate_expired_reminders()
+    return 0
 
 
 def deactivate_user_reminder(reminder_id: int) -> None:

@@ -8,26 +8,62 @@ from collections import defaultdict
 from contextlib import contextmanager
 from pathlib import Path
 
+from .config import Config
 from .models import DayType, ScheduleEntry, StationSchedule
+
+
+_CONNECTIONS: dict[str, sqlite3.Connection] = {}
 
 
 class MetroDatabase:
     """SQLite database for metro data."""
 
-    def __init__(self, db_path: str = "data/metro.db") -> None:
+    def __init__(self, db_path: str | None = None, connection: sqlite3.Connection | None = None) -> None:
+        if db_path is None:
+            from .config import Config
+
+            db_path = Config().get_db_path()
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._connection: sqlite3.Connection | None = connection
+        if self._connection is not None:
+            self._connection.row_factory = sqlite3.Row
         self._init_db()
 
     @contextmanager
     def _get_connection(self):
         """Get database connection with proper setup."""
+        if self._connection is not None:
+            yield self._connection
+            return
+
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
         try:
             yield conn
         finally:
             conn.close()
+
+    def close(self) -> None:
+        """Close shared connection if present."""
+        if self._connection is not None:
+            self._connection.close()
+            _CONNECTIONS.pop(str(self.db_path), None)
+            self._connection = None
+
+    @classmethod
+    def shared(cls, db_path: str | None = None) -> "MetroDatabase":
+        """Return a MetroDatabase using a shared connection."""
+        if db_path is None:
+            from .config import Config
+
+            db_path = Config().get_db_path()
+        resolved = str(Path(db_path))
+        if resolved not in _CONNECTIONS:
+            conn = sqlite3.connect(resolved)
+            conn.row_factory = sqlite3.Row
+            _CONNECTIONS[resolved] = conn
+        return cls(db_path=resolved, connection=_CONNECTIONS[resolved])
 
     def _init_db(self) -> None:
         """Initialize database schema."""
@@ -360,7 +396,8 @@ class MetroDatabase:
             return True, None, None  # No schedules, assume always open
 
         # Calculate earliest planning time
-        first_dt = dt.datetime.combine(dt.datetime.today(), first_departure)
+        timezone = Config.TIMEZONE
+        first_dt = dt.datetime.combine(dt.datetime.now(timezone).date(), first_departure, tzinfo=timezone)
         earliest_planning_dt = first_dt - dt.timedelta(minutes=early_planning_minutes)
         earliest_planning = dt.time(earliest_planning_dt.hour, earliest_planning_dt.minute)
 

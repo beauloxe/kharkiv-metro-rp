@@ -360,7 +360,9 @@ class MetroRouter:
     ) -> list[StationSchedule]:
         """Get schedule for a station."""
         if day_type is None:
-            day_type = self._get_day_type(dt.datetime.now(Config.TIMEZONE))
+            from .time_utils import now
+
+            day_type = self._get_day_type(now())
 
         if direction_id:
             schedule = self.db.get_station_schedule(station_id, direction_id, day_type)

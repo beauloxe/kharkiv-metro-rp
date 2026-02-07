@@ -48,8 +48,12 @@ def init_schedules(db: MetroDatabase) -> None:
         print("Schedules will need to be loaded manually")
 
 
-def init_database(db_path: str = "data/metro.db") -> MetroDatabase:
+def init_database(db_path: str | None = None) -> MetroDatabase:
     """Initialize database with all static data."""
+    if db_path is None:
+        from .config import Config
+
+        db_path = Config().get_db_path()
     db = MetroDatabase(db_path)
     init_stations(db)
     init_schedules(db)

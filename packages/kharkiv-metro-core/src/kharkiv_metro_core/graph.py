@@ -7,7 +7,8 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from operator import attrgetter
 
-from .models import ALIAS_STATION_NAMES, TRANSFERS, Line, Station, create_stations
+from .data_loader import load_metro_data
+from .models import Line, Station, create_stations
 
 
 @dataclass
@@ -39,6 +40,7 @@ class MetroGraph:
 
     def _build_graph(self) -> None:
         """Build graph from stations."""
+        metro_data = load_metro_data()
         # Create nodes for all stations
         for station_id in self.stations:
             self.nodes[station_id] = GraphNode(station_id=station_id)
@@ -65,7 +67,7 @@ class MetroGraph:
                 self._add_edge(next_station.id, current.id, 2.0)
 
         # Add transfer edges
-        for from_id, to_id in TRANSFERS.items():
+        for from_id, to_id in metro_data.transfers.items():
             self._add_edge(from_id, to_id, self.TRANSFER_TIME_MINUTES, is_transfer=True)
 
     def _add_edge(self, from_id: str, to_id: str, weight: float, is_transfer: bool = False) -> None:
@@ -131,9 +133,11 @@ class MetroGraph:
         name_lower = name.lower().strip()
         name_attr = f"name_{lang}"
 
+        metro_data = load_metro_data()
+
         # Resolve alias to actual name
-        if name_lower in ALIAS_STATION_NAMES:
-            resolved_name = ALIAS_STATION_NAMES[name_lower]
+        if name_lower in metro_data.aliases:
+            resolved_name = metro_data.aliases[name_lower]
             name_lower = resolved_name.lower()
 
         stations = list(self.stations.values())

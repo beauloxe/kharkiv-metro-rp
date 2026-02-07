@@ -7,7 +7,7 @@ from datetime import datetime
 
 import click
 from click.exceptions import Exit
-from kharkiv_metro_core import Config, DayType, MetroClosedError, MetroDatabase, MetroRouter
+from kharkiv_metro_core import Config, DayType, MetroClosedError, MetroDatabase, MetroRouter, now
 
 from .utils import console, display_route_simple, display_route_table
 
@@ -63,14 +63,14 @@ def route(
         if time:
             hour, minute = map(int, time.split(":"))
         else:
-            now = datetime.now(Config.TIMEZONE)
-            hour, minute = now.hour, now.minute
+            current_time = now()
+            hour, minute = current_time.hour, current_time.minute
 
         if date:
             year, month, day = map(int, date.split("-"))
             departure_time = datetime(year, month, day, hour, minute, tzinfo=Config.TIMEZONE)
         else:
-            departure_time = datetime.now(Config.TIMEZONE).replace(hour=hour, minute=minute, second=0, microsecond=0)
+            departure_time = now().replace(hour=hour, minute=minute, second=0, microsecond=0)
 
         # Determine day type
         day_type_enum = None

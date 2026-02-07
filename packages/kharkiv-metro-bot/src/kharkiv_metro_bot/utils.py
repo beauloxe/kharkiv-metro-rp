@@ -14,8 +14,11 @@ from kharkiv_metro_core import (
     MetroDatabase,
     MetroRouter,
     Route,
+    get_line_display_name,
     init_database,
     init_schedules,
+    load_metro_data,
+    now as core_now,
 )
 
 if TYPE_CHECKING:
@@ -24,7 +27,7 @@ if TYPE_CHECKING:
 
 def now() -> datetime:
     """Get current time in configured timezone."""
-    return datetime.now(Config.TIMEZONE)
+    return core_now()
 
 
 def get_db_path() -> str:
@@ -46,47 +49,64 @@ def get_router() -> MetroRouter:
         except Exception:
             pass  # Schedules can be added later
     else:
-        db = MetroDatabase(db_path)
+        db = MetroDatabase.shared(db_path)
 
     return MetroRouter(db=db)
 
 
-def get_stations_by_line(router: MetroRouter, line_name: str, lang: Language = "ua") -> list[str]:
+def _normalize_line_key(line_key: str | None) -> str | None:
+    """Normalize line key or internal name to line key."""
+    if not line_key:
+        return None
+    line_meta = load_metro_data().line_meta
+    if line_key in line_meta:
+        return line_key
+    for key, meta in line_meta.items():
+        if meta.get("name_ua") == line_key:
+            return key
+    return None
+
+
+def get_stations_by_line(router: MetroRouter, line_key: str, lang: Language = "ua") -> list[str]:
     """Get station names for a given line.
 
     Args:
         router: MetroRouter instance
-        line_name: Internal line name (e.g., "Холодногірсько-заводська")
+        line_key: Internal line key (e.g., "kholodnohirsko_zavodska")
         lang: Language code
 
     Returns:
         List of station names in the requested language
     """
-    name_attr = "name_ua" if lang == "ua" else "name_en"
-    # Always compare with display_name_ua since line_name is internal (Ukrainian)
-    return [getattr(st, name_attr) for st in router.stations.values() if st.line.display_name_ua == line_name]
+    normalized_key = _normalize_line_key(line_key)
+    if not normalized_key:
+        return []
+    name_attr = f"name_{lang}"
+    return [getattr(st, name_attr) for st in router.stations.values() if st.line.value == normalized_key]
 
 
 def get_stations_by_line_except(
-    router: MetroRouter, line_name: str, exclude_station: str, lang: Language = "ua"
+    router: MetroRouter, line_key: str, exclude_station: str, lang: Language = "ua"
 ) -> list[str]:
     """Get station names for a line, excluding one station.
 
     Args:
         router: MetroRouter instance
-        line_name: Internal line name (e.g., "Холодногірсько-заводська")
+        line_key: Internal line key (e.g., "kholodnohirsko_zavodska")
         exclude_station: Station name to exclude
         lang: Language code
 
     Returns:
         List of station names in the requested language
     """
-    name_attr = "name_ua" if lang == "ua" else "name_en"
-    # Always compare with display_name_ua since line_name is internal (Ukrainian)
+    normalized_key = _normalize_line_key(line_key)
+    if not normalized_key:
+        return []
+    name_attr = f"name_{lang}"
     return [
         getattr(st, name_attr)
         for st in router.stations.values()
-        if st.line.display_name_ua == line_name and getattr(st, name_attr) != exclude_station
+        if st.line.value == normalized_key and getattr(st, name_attr) != exclude_station
     ]
 
 
@@ -96,8 +116,8 @@ def format_route(route: Route, lang: Language = "ua") -> str:
 
     from .constants import LINE_COLOR_EMOJI
 
-    name_attr = "name_ua" if lang == "ua" else "name_en"
-    min_text = "хв" if lang == "ua" else "min"
+    name_attr = f"name_{lang}"
+    min_text = get_text("min", lang)
 
     lines = [
         f"🚇 {getattr(route.segments[0].from_station, name_attr)} → {getattr(route.segments[-1].to_station, name_attr)}",
@@ -150,7 +170,7 @@ def format_schedule(station_name: str, schedules: list, router: MetroRouter, lan
     """Format schedule for Telegram."""
     from kharkiv_metro_core import get_text
 
-    name_attr = "name_ua" if lang == "ua" else "name_en"
+    name_attr = f"name_{lang}"
     day_type_text = get_text("weekday" if schedules[0].day_type.value == "weekday" else "weekend", lang)
 
     lines = [f"🚇 {station_name}", f"📅 {day_type_text}", ""]
@@ -169,7 +189,7 @@ def format_schedule(station_name: str, schedules: list, router: MetroRouter, lan
             unique_schedules.append((sch, dir_station))
 
     for sch, dir_station in unique_schedules[:2]:  # Up to 2 unique directions
-        direction_text = get_text("cmd_schedule", lang) if lang == "en" else "Напрямок"
+        direction_text = get_text("direction", lang)
         lines.append(f"➡️ {direction_text}: {getattr(dir_station, name_attr)}")
 
         # Group by hour
@@ -188,10 +208,8 @@ def format_schedule(station_name: str, schedules: list, router: MetroRouter, lan
 
 def format_stations_list(line_name: str, stations: list[str], lang: Language = "ua") -> str:
     """Format stations list."""
-    from kharkiv_metro_core import get_line_display_by_internal
-
-    # line_name is internal (Ukrainian), translate to display name
-    display_name = get_line_display_by_internal(line_name, lang)
+    line_key = _normalize_line_key(line_name) or line_name
+    display_name = get_line_display_name(line_key, lang)
     header = f"{display_name}:\n"
     body = "\n".join(f"• {name}" for name in stations)
     return header + body

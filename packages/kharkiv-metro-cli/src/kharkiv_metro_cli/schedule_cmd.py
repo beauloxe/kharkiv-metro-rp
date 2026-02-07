@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, time
+from datetime import time
 from typing import TYPE_CHECKING
 
 import click
 from click.exceptions import Exit
-from kharkiv_metro_core import Config, DayType, MetroDatabase, MetroRouter
+from kharkiv_metro_core import Config, DayType, MetroDatabase, MetroRouter, now
 from kharkiv_metro_core import get_text as tr
 from rich.table import Table
 
@@ -80,7 +80,7 @@ def schedule(
             if day_type == "weekday"
             else DayType.WEEKEND
             if day_type
-            else (DayType.WEEKDAY if datetime.now(Config.TIMEZONE).weekday() < 5 else DayType.WEEKEND)
+            else (DayType.WEEKDAY if now().weekday() < 5 else DayType.WEEKEND)
         )
 
         # Find direction if specified
@@ -95,7 +95,7 @@ def schedule(
         last_departure = db.get_last_departure_time(day_type_enum)
 
         # Check if metro is open
-        check_time = datetime.now(Config.TIMEZONE).time()
+        check_time = now().time()
         is_open, _, _ = db.is_metro_open(day_type_enum, check_time)
 
         # Get schedules

@@ -6,16 +6,17 @@ from datetime import datetime, timedelta
 from typing import Callable
 
 from aiogram import Dispatcher, F, Router, types
-from aiogram.filters import Command
+from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from kharkiv_metro_core import (
-    DAY_TYPE_DISPLAY_TO_INTERNAL,
-    LINE_DISPLAY_TO_INTERNAL,
     DayType,
     Language,
     MetroClosedError,
     get_line_display_name,
     get_text,
+    load_metro_data,
+    parse_day_type_display,
+    parse_line_display_name,
 )
 
 from ..keyboards import (
@@ -29,6 +30,7 @@ from ..keyboards import (
 from ..states import RouteStates
 from ..user_data import (
     clear_user_reminders,
+    cleanup_expired_reminders,
     deactivate_user_reminder,
     get_all_active_reminders,
     save_user_reminder,
@@ -87,9 +89,7 @@ async def update_message(
 def get_valid_lines(lang: Language) -> list[str]:
     """Get list of valid line display names."""
     return [
-        get_line_display_name("kholodnohirsko_zavodska", lang),
-        get_line_display_name("saltivska", lang),
-        get_line_display_name("oleksiivska", lang),
+        get_line_display_name(line_key, lang) for line_key in load_metro_data().line_order
     ]
 
 
@@ -108,6 +108,7 @@ def parse_time(time_str: str) -> datetime | None:
 
 async def restore_pending_reminders(bot) -> None:
     """Restore active reminders from database."""
+    cleanup_expired_reminders()
     metro_router = get_router()
     for reminder in get_all_active_reminders():
         user_id = reminder.get("user_id")
@@ -142,9 +143,10 @@ async def restore_pending_reminders(bot) -> None:
 # ===== Main Entry Point =====
 
 
-@router.message(Command("route"))
+@router.message(Command("route"), StateFilter("*"))
 async def cmd_route(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Start route conversation."""
+    await state.clear()
     await state.set_state(RouteStates.waiting_for_from_line)
 
     valid_lines = get_valid_lines(lang)
@@ -167,7 +169,7 @@ async def handle_line_selection(
     storage_key: str,
 ) -> bool:
     """Handle line selection with validation."""
-    selected = LINE_DISPLAY_TO_INTERNAL.get(message.text)
+    selected = parse_line_display_name(message.text, lang)
 
     if not selected:
         await message.answer(
@@ -186,7 +188,7 @@ async def handle_line_selection(
     await update_message(
         message,
         state,
-        get_text(prompt_key, lang, line=message.text),
+        get_text(prompt_key, lang, line=get_line_display_name(selected, lang)),
         get_stations_keyboard(stations, lang),
     )
     return True
@@ -286,7 +288,7 @@ async def process_from_station(message: types.Message, state: FSMContext, lang: 
 )
 async def process_to_line(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Process line selection for 'to' station."""
-    selected = LINE_DISPLAY_TO_INTERNAL.get(message.text)
+    selected = parse_line_display_name(message.text, lang)
     if not selected:
         await message.answer(
             get_text("error_unknown_line", lang),
@@ -307,7 +309,7 @@ async def process_to_line(message: types.Message, state: FSMContext, lang: Langu
     await update_message(
         message,
         state,
-        get_text("select_station_line", lang, line=message.text),
+        get_text("select_station_line", lang, line=get_line_display_name(selected, lang)),
         get_stations_keyboard(stations, lang),
     )
 
@@ -383,7 +385,11 @@ async def process_day_type_route(message: types.Message, state: FSMContext, lang
         await message.answer(get_text("error_unknown_choice", lang), reply_markup=get_day_type_keyboard(lang))
         return
 
-    selected = DAY_TYPE_DISPLAY_TO_INTERNAL.get(message.text)
+    selected = parse_day_type_display(message.text, lang)
+    if not selected:
+        await message.answer(get_text("error_unknown_choice", lang), reply_markup=get_day_type_keyboard(lang))
+        return
+
     await state.update_data(day_type=selected)
     await state.set_state(RouteStates.waiting_for_custom_time)
 
@@ -432,9 +438,6 @@ async def process_offset_time(message: types.Message, state: FSMContext, lang: L
 @router.message(RouteStates.waiting_for_from_station, F.text.in_(BACK_TEXTS))
 async def back_from_station(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Go back from station selection to line selection."""
-    data = await state.get_data()
-    from_line = data.get("from_line", "Холодногірсько-заводська")
-
     await handle_back(
         message,
         state,
@@ -449,9 +452,21 @@ async def back_from_station(message: types.Message, state: FSMContext, lang: Lan
 async def back_from_line(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Go back from to_line to from_station."""
     data = await state.get_data()
-    from_line = data.get("from_line", "Холодногірсько-заводська")
+    from_line = data.get("from_line")
+    line_display = get_line_display_name(from_line, lang) if from_line else None
 
     metro_router = get_router()
+    if not from_line:
+        await handle_back(
+            message,
+            state,
+            lang,
+            RouteStates.waiting_for_from_line,
+            get_text("from_station_prompt", lang),
+            get_lines_keyboard(lang),
+        )
+        return
+
     stations = get_stations_by_line(metro_router, from_line, lang)
 
     await handle_back(
@@ -459,7 +474,7 @@ async def back_from_line(message: types.Message, state: FSMContext, lang: Langua
         state,
         lang,
         RouteStates.waiting_for_from_station,
-        get_text("select_station_line", lang, line=from_line),
+        get_text("select_station_line", lang, line=line_display),
         get_stations_keyboard(stations, lang),
     )
 
@@ -481,16 +496,24 @@ async def back_to_station(message: types.Message, state: FSMContext, lang: Langu
 async def back_from_time_choice(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Go back from time_choice to to_station."""
     data = await state.get_data()
-    to_line = data.get("to_line", "Холодногірсько-заводська")
+    to_line = data.get("to_line")
     from_station = data.get("from_station", "")
 
     metro_router = get_router()
+    if not to_line:
+        await handle_back(
+            message,
+            state,
+            lang,
+            RouteStates.waiting_for_to_line,
+            get_text("to_station_prompt", lang),
+            get_lines_keyboard(lang),
+        )
+        return
+
     stations = get_stations_by_line_except(metro_router, to_line, from_station, lang)
 
-    # Convert internal line name to display name with emoji
-    from kharkiv_metro_core import get_line_display_by_internal
-
-    line_display = get_line_display_by_internal(to_line, lang)
+    line_display = get_line_display_name(to_line, lang) if to_line else None
 
     await handle_back(
         message,
@@ -694,7 +717,7 @@ async def _send_reminder(bot, user_id: int, station, lang: Language, delay: floa
     if user_id not in pending_reminders:
         return
 
-    name_attr = "name_ua" if lang == "ua" else "name_en"
+    name_attr = f"name_{lang}"
     await bot.send_message(user_id, get_text("reminder_exit_prepare", lang, station=getattr(station, name_attr)))
 
     if reminder_id:

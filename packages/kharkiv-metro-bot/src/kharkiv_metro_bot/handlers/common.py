@@ -11,16 +11,18 @@ from ..keyboards import get_language_keyboard, get_lines_keyboard, get_main_keyb
 from ..user_data import get_user_language, set_user_language
 
 
-async def cmd_start(message: types.Message, lang: Language = "ua"):
+async def cmd_start(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Handle /start command."""
+    await state.clear()
     await message.answer(
         get_text("start_message", lang),
         reply_markup=get_main_keyboard(lang),
     )
 
 
-async def cmd_about(message: types.Message, lang: Language = "ua"):
+async def cmd_about(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Handle /about command."""
+    await state.clear()
     about_text = get_text("about_message", lang)
     await message.answer(
         about_text, parse_mode="HTML", reply_markup=get_main_keyboard(lang), disable_web_page_preview=True
@@ -29,9 +31,10 @@ async def cmd_about(message: types.Message, lang: Language = "ua"):
 
 async def cmd_language(message: types.Message, state: FSMContext):
     """Handle /lang command - show language selection."""
+    await state.clear()
     await state.set_state("waiting_for_language")
     await message.answer(
-        "🌐 Оберіть мову / Select language:",
+        get_text("select_language", get_user_language(message.from_user.id)),
         reply_markup=get_language_keyboard(),
     )
 
@@ -43,13 +46,13 @@ async def process_language_selection(message: types.Message, state: FSMContext):
     if message.text == "🇺🇦 Українська":
         set_user_language(user_id, "ua")
         await message.answer(
-            "✅ Мову змінено на Українську",
+            get_text("language_set", "ua"),
             reply_markup=get_main_keyboard("ua"),
         )
     elif message.text == "🇬🇧 English":
         set_user_language(user_id, "en")
         await message.answer(
-            "✅ Language changed to English",
+            get_text("language_set", "en"),
             reply_markup=get_main_keyboard("en"),
         )
     else:
@@ -134,9 +137,9 @@ async def set_bot_commands(bot: Bot):
 def register_common_handlers(dp: Dispatcher):
     """Register common handlers."""
     # Command handlers - work in any state
-    dp.message.register(cmd_start, Command("start"))
-    dp.message.register(cmd_about, Command("about"))
-    dp.message.register(cmd_language, Command("lang"))
+    dp.message.register(cmd_start, Command("start"), StateFilter("*"))
+    dp.message.register(cmd_about, Command("about"), StateFilter("*"))
+    dp.message.register(cmd_language, Command("lang"), StateFilter("*"))
 
     # Language selection handler
     dp.message.register(process_language_selection, F.text.in_(["🇺🇦 Українська", "🇬🇧 English"]))

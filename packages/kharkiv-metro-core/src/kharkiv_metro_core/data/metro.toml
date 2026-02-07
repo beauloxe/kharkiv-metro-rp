@@ -1,0 +1,301 @@
+[lines]
+order = ["kholodnohirsko_zavodska", "saltivska", "oleksiivska"]
+
+[line_meta.kholodnohirsko_zavodska]
+name_ua = "Холодногірсько-заводська"
+name_en = "Kholodnohirsko-Zavodska"
+display_ua = "🔴 Холодногірсько-Заводська"
+display_en = "🔴 Kholodnohirsko-Zavodska"
+color = "red"
+emoji = "🔴"
+
+[line_meta.saltivska]
+name_ua = "Салтівська"
+name_en = "Saltivska"
+display_ua = "🔵 Салтівська"
+display_en = "🔵 Saltivska"
+color = "blue"
+emoji = "🔵"
+
+[line_meta.oleksiivska]
+name_ua = "Олексіївська"
+name_en = "Oleksiivska"
+display_ua = "🟢 Олексіївська"
+display_en = "🟢 Oleksiivska"
+color = "green"
+emoji = "🟢"
+
+[day_types]
+[day_types.weekday]
+name_ua = "Будні"
+name_en = "Weekdays"
+emoji = "📅"
+
+[day_types.weekend]
+name_ua = "Вихідні"
+name_en = "Weekends"
+emoji = "🎉"
+
+[lines.kholodnohirsko_zavodska]
+[[lines.kholodnohirsko_zavodska.stations]]
+id = "kholodna_hora"
+name_ua = "Холодна гора"
+name_en = "Kholodna Hora"
+
+[[lines.kholodnohirsko_zavodska.stations]]
+id = "vokzalna"
+name_ua = "Вокзальна"
+name_en = "Vokzalna"
+
+[[lines.kholodnohirsko_zavodska.stations]]
+id = "tsentralnyi_rynok"
+name_ua = "Центральний ринок"
+name_en = "Tsentralnyi Rynok"
+
+[[lines.kholodnohirsko_zavodska.stations]]
+id = "maidan_konstytutsii"
+name_ua = "Майдан Конституції"
+name_en = "Maidan Konstytutsii"
+
+[[lines.kholodnohirsko_zavodska.stations]]
+id = "levada"
+name_ua = "Левада"
+name_en = "Levada"
+
+[[lines.kholodnohirsko_zavodska.stations]]
+id = "sportyvna"
+name_ua = "Спортивна"
+name_en = "Sportyvna"
+
+[[lines.kholodnohirsko_zavodska.stations]]
+id = "zavodska"
+name_ua = "Заводська"
+name_en = "Zavodska"
+
+[[lines.kholodnohirsko_zavodska.stations]]
+id = "turboatom"
+name_ua = "Турбоатом"
+name_en = "Turboatom"
+
+[[lines.kholodnohirsko_zavodska.stations]]
+id = "palats_sportu"
+name_ua = "Палац спорту"
+name_en = "Palats Sportu"
+
+[[lines.kholodnohirsko_zavodska.stations]]
+id = "armiiska"
+name_ua = "Армійська"
+name_en = "Armiiska"
+
+[[lines.kholodnohirsko_zavodska.stations]]
+id = "maselskoho"
+name_ua = "Ім. О.С. Масельського"
+name_en = "Im. O.S. Maselskoho"
+
+[[lines.kholodnohirsko_zavodska.stations]]
+id = "traktornyi_zavod"
+name_ua = "Тракторний завод"
+name_en = "Traktornyi Zavod"
+
+[[lines.kholodnohirsko_zavodska.stations]]
+id = "industrialna"
+name_ua = "Індустріальна"
+name_en = "Industrialna"
+
+[lines.saltivska]
+[[lines.saltivska.stations]]
+id = "istorychnyi_muzei"
+name_ua = "Історичний музей"
+name_en = "Istorychnyi Muzei"
+
+[[lines.saltivska.stations]]
+id = "university"
+name_ua = "Університет"
+name_en = "Universytet"
+
+[[lines.saltivska.stations]]
+id = "yaroslava_mudroho"
+name_ua = "Ярослава Мудрого"
+name_en = "Yaroslava Mudroho"
+
+[[lines.saltivska.stations]]
+id = "kyivska"
+name_ua = "Київська"
+name_en = "Kyivska"
+
+[[lines.saltivska.stations]]
+id = "barabashova"
+name_ua = "Академіка Барабашова"
+name_en = "Akademika Barabashova"
+
+[[lines.saltivska.stations]]
+id = "pavlova"
+name_ua = "Академіка Павлова"
+name_en = "Akademika Pavlova"
+
+[[lines.saltivska.stations]]
+id = "studentska"
+name_ua = "Студентська"
+name_en = "Studentska"
+
+[[lines.saltivska.stations]]
+id = "saltivska"
+name_ua = "Салтівська"
+name_en = "Saltivska"
+
+[lines.oleksiivska]
+[[lines.oleksiivska.stations]]
+id = "metrobudivnykiv"
+name_ua = "Метробудівників"
+name_en = "Metrobudivnykiv"
+
+[[lines.oleksiivska.stations]]
+id = "zakhysnykiv_ukrainy"
+name_ua = "Захисників України"
+name_en = "Zakhysnykiv Ukrainy"
+
+[[lines.oleksiivska.stations]]
+id = "beketova"
+name_ua = "Архітектора Бекетова"
+name_en = "Arkhitektora Beketova"
+
+[[lines.oleksiivska.stations]]
+id = "derzhprom"
+name_ua = "Держпром"
+name_en = "Derzhprom"
+
+[[lines.oleksiivska.stations]]
+id = "naukova"
+name_ua = "Наукова"
+name_en = "Naukova"
+
+[[lines.oleksiivska.stations]]
+id = "botanichnyi_sad"
+name_ua = "Ботанічний сад"
+name_en = "Botanichnyi Sad"
+
+[[lines.oleksiivska.stations]]
+id = "23_serpnia"
+name_ua = "23 Серпня"
+name_en = "23 Serpnia"
+
+[[lines.oleksiivska.stations]]
+id = "oleksiivska"
+name_ua = "Олексіївська"
+name_en = "Oleksiivska"
+
+[[lines.oleksiivska.stations]]
+id = "peremoha"
+name_ua = "Перемога"
+name_en = "Peremoha"
+
+[transfers]
+maidan_konstytutsii = "istorychnyi_muzei"
+istorychnyi_muzei = "maidan_konstytutsii"
+sportyvna = "metrobudivnykiv"
+metrobudivnykiv = "sportyvna"
+university = "derzhprom"
+derzhprom = "university"
+
+[aliases]
+"героїв праці" = "Салтівська"
+"проспект гагаріна" = "Левада"
+"пушкінська" = "Ярослава Мудрого"
+"завод імені малишева" = "Заводська"
+"південний вокзал" = "Вокзальна"
+"23" = "23 Серпня"
+"барабашова" = "Академіка Барабашова"
+"бекетова" = "Архітектора Бекетова"
+"ботсад" = "Ботанічний сад"
+"гагаріна" = "Левада"
+"масельського" = "Ім. О.С. Масельського"
+"павлова" = "Академіка Павлова"
+"палац" = "Палац спорту"
+"хтз" = "Тракторний завод"
+
+[scraper]
+base_url = "https://www.metro.kharkiv.ua"
+
+[scraper.line_urls.weekday]
+kholodnohirsko_zavodska = "kholodnohikrsko-zavodska-liniia/"
+saltivska = "saltivska-liniia/"
+oleksiivska = "oleksiivska-liniia/"
+
+[scraper.line_urls.weekend]
+kholodnohirsko_zavodska = "kholodnohikrsko-zavodska-liniia-vykhidni-dni/"
+saltivska = "saltivska-liniia.html"
+oleksiivska = "oleksiivska-liniia-vykhidni-dni/"
+
+[scraper.line3_station_urls.weekday]
+metrobudivnykiv = "stantsiia-%C2%ABmetkrobudivnykiv%C2%BB.html"
+zakhysnykiv_ukrainy = "stantsiia-%C2%ABzakhysnykiv-ukkrainy%C2%BB.html"
+beketova = "stantsiia-%C2%ABakrkhitektokra-beketova%C2%BB.html"
+derzhprom = "stantsiia-%C2%ABdekrzhpkrom%C2%BB.html"
+naukova = "stantsiia-%C2%ABnaukova%C2%BB.html"
+botanichnyi_sad = "stantsiia-%C2%ABbotanichnyi-sad%C2%BB.html"
+"23_serpnia" = "stantsiia-%C2%AB23-sekrpnia%C2%BB.html"
+oleksiivska = "stantsiia-%C2%ABoleksiivska%C2%BB.html"
+peremoha = "stantsiia-%C2%ABpekremoha%C2%BB.html"
+
+[scraper.line3_station_urls.weekend]
+metrobudivnykiv = "stantsiia-%C2%ABmetkrobudivnykiv%C2%BB-(vykhidni-dni).html"
+zakhysnykiv_ukrainy = "stantsiia-%C2%ABzakhysnykiv-ukkrainy%C2%BB-(vykhidni-dni).html"
+beketova = "stantsiia-%C2%ABakrkhitektokra-beketova%C2%BB-(vykhidni-dni).html"
+derzhprom = "stantsiia-%C2%ABdekrzhpkrom%C2%BB-(vykhidni-dni).html"
+naukova = "stantsiia-%C2%ABnaukova%C2%BB-(vykhidni-dni).html"
+botanichnyi_sad = "stantsiia-%C2%ABbotanichnyi-sad%C2%BB-(vykhidni-dni).html"
+"23_serpnia" = "stantsiia-%C2%AB23-sekrpnia%C2%BB-(vykhidni-dni).html"
+oleksiivska = "stantsiia-%C2%ABoleksiivska%C2%BB-(vykhidni-dni).html"
+peremoha = "stantsiia-%C2%ABpekremoha%C2%BB-(vykhidni-dni).html"
+
+[scraper.station_names]
+metrobudivnykiv = "Метробудівників"
+zakhysnykiv_ukrainy = "Захисників України"
+beketova = "Архітектора Бекетова"
+derzhprom = "Держпром"
+naukova = "Наукова"
+botanichnyi_sad = "Ботанічний сад"
+"23_serpnia" = "23 Серпня"
+oleksiivska = "Олексіївська"
+peremoha = "Перемога"
+
+[scraper.station_url_mapping]
+"kholodna-hokra" = "kholodna_hora"
+"vokzalna" = "vokzalna"
+"tsentkralnyi-krynok" = "tsentralnyi_rynok"
+"maidan-konstytutsii" = "maidan_konstytutsii"
+"levada" = "levada"
+"spokrtyvna" = "sportyvna"
+"zavodska" = "zavodska"
+"tukrboatom" = "turboatom"
+"palats-spokrtu" = "palats_sportu"
+"akrmiiska" = "armiiska"
+"im.-o.s.-maselskoho" = "maselskoho"
+"tkraktokrnyi-zavod" = "traktornyi_zavod"
+"industkrialna" = "industrialna"
+"istokrychnyi-muzei" = "istorychnyi_muzei"
+"universytet" = "university"
+"univekrsytet" = "university"
+"pushkinska" = "yaroslava_mudroho"
+"yakroslava-mudkroho" = "yaroslava_mudroho"
+"kyivska" = "kyivska"
+"akademika-bakrabashova" = "barabashova"
+"akademika-pavlova" = "pavlova"
+"studentska" = "studentska"
+"heroiv-praci" = "saltivska"
+"saltivska" = "saltivska"
+"metrobudivnykiv" = "metrobudivnykiv"
+"metkrobudivnykiv" = "metrobudivnykiv"
+"zakhysnykiv-ukrainy" = "zakhysnykiv_ukrainy"
+"zakhysnykiv-ukkrainy" = "zakhysnykiv_ukrainy"
+"akrkhitektokra-beketova" = "beketova"
+"derzhprom" = "derzhprom"
+"dekrzhpkrom" = "derzhprom"
+"nauky" = "naukova"
+"naukova" = "naukova"
+"botanichnyi-sad" = "botanichnyi_sad"
+"23-serpnia" = "23_serpnia"
+"23-sekrpnia" = "23_serpnia"
+"oleksiivska" = "oleksiivska"
+"peremoha" = "peremoha"
+"pekremoha" = "peremoha"

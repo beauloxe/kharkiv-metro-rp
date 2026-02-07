@@ -4,7 +4,6 @@ from .constants import (
     DAY_TYPE_DISPLAY_TO_INTERNAL,
     DAY_TYPE_INTERNAL_TO_DISPLAY,
     LINE_COLOR_EMOJI,
-    LINE_DISPLAY_TO_INTERNAL,
     LINE_INTERNAL_TO_DISPLAY,
     LINE_NAME_EMOJI,
     LINE_ORDER,
@@ -47,7 +46,6 @@ __all__ = [
     "get_stations_keyboard_by_line",
     "build_reminder_keyboard",
     # Constants
-    "LINE_DISPLAY_TO_INTERNAL",
     "LINE_INTERNAL_TO_DISPLAY",
     "LINE_ORDER",
     "LINE_COLOR_EMOJI",

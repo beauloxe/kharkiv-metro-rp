@@ -6,7 +6,7 @@ from aiogram.types import (
     KeyboardButton,
     ReplyKeyboardMarkup,
 )
-from kharkiv_metro_core import Language, MetroRouter, get_line_display_name, get_text
+from kharkiv_metro_core import Language, MetroRouter, get_line_display_name, get_text, load_metro_data
 
 from .constants import LINE_ORDER
 
@@ -33,9 +33,8 @@ def _add_nav_buttons(keyboard: list, lang: Language) -> list:
 def get_lines_keyboard(lang: Language = "ua") -> ReplyKeyboardMarkup:
     """Create keyboard with line selection and navigation."""
     keyboard = [
-        [KeyboardButton(text=get_line_display_name("kholodnohirsko_zavodska", lang))],
-        [KeyboardButton(text=get_line_display_name("saltivska", lang))],
-        [KeyboardButton(text=get_line_display_name("oleksiivska", lang))],
+        [KeyboardButton(text=get_line_display_name(line_key, lang))]
+        for line_key in load_metro_data().line_order
     ]
     keyboard = _add_nav_buttons(keyboard, lang)
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True, one_time_keyboard=True)
@@ -113,7 +112,7 @@ def get_stations_keyboard_by_line(
         if internal_line_name in lines_stations:
             # Check exclusion using internal name
             if exclude_internal is None or st.name_ua != exclude_internal:
-                lines_stations[internal_line_name].append(st.name_ua if lang == "ua" else st.name_en)
+                lines_stations[internal_line_name].append(getattr(st, f"name_{lang}"))
 
     # Build keyboard: stations grouped by line (2 per row)
     keyboard = []
@@ -143,7 +142,7 @@ def build_reminder_keyboard(
             continue
         if clicked_idx is not None and idx == clicked_idx:
             # This is the clicked button - show as set
-            time_display = remind_time or "✅"
+            time_display = remind_time or get_text("reminder_set_short", lang)
             buttons.append(
                 [
                     InlineKeyboardButton(
@@ -157,11 +156,11 @@ def build_reminder_keyboard(
             if len(segments) >= 1:
                 last_seg = segments[-1]
                 remind_ts = int(last_seg.departure_time.timestamp()) if last_seg.departure_time else 0
-                station_name = last_seg.to_station.name_ua if lang == "ua" else last_seg.to_station.name_en
+                station_name = getattr(last_seg.to_station, f"name_{lang}")
                 btn_text = get_text("reminder_button", lang, station=station_name)
             else:
                 remind_ts = 0
-                btn_text = "⏰ Exit"
+                btn_text = get_text("reminder_button_default", lang)
 
             buttons.append(
                 [

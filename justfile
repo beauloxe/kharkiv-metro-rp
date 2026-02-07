@@ -25,6 +25,7 @@ format:
 
 vhs-script := '
     Set FontFamily "IosevkaTerm Nerd Font Mono"
+    Set TypingSpeed 0.02
 
     Set Padding 16
     Set BorderRadius 12
@@ -37,25 +38,25 @@ vhs-script := '
     Set Height 600
 
     Type "metro route салтівська турбоатом -t 07:25 -s weekday -f full"
+    Sleep 0.5s
     Enter
 
-    Sleep 1.3s
+    Sleep 2s
 
     Type "metro route салтівська турбоатом -t 07:25 -s weekday -f simple"
+    Sleep 0.5s
     Enter
 
-    Sleep 2.3s
+    Sleep 4s
 
-    Type "metro config set preferences.route.compact true"
-    Enter
-    Sleep 300ms
-
-    Type "metro route салтівська турбоатом -t 07:25 -s weekday -f full"
+    Type "metro route салтівська турбоатом -t 07:25 -s weekday -f full --compact"
+    Sleep 0.5s
     Enter
 
-    Sleep 1.3s
+    Sleep 2s
 
-    Type "metro route салтівська турбоатом -t 07:25 -s weekday -f simple"
+    Type "metro route салтівська турбоатом -t 07:25 -s weekday -f simple --compact"
+    Sleep 0.5s
     Enter
 
     Sleep 10s

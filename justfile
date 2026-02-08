@@ -1,25 +1,35 @@
 alias m := metro
 alias mb := metro-bot
 alias mm := metro-mcp
+alias l := lint
+alias f := format
+alias c := clean
+alias d := demo
 
-default:
+
+_default:
     @just --list
 
+# Run metro cli
 metro *args:
     uv run metro {{args}}
 
+# Run metro-bot
 metro-bot:
     uv run metro-bot
 
+# Run metro-mcp
 metro-mcp:
     uv run metro-mcp
 
 # test:
 #     uv run pytest
 
-lint:
-    uv run ruff check .
+# Lint with `ruff check`
+lint *args:
+    uv run ruff check . {{args}}
 
+# Format code with `ruff format`
 format:
     uv run ruff format .
 
@@ -83,12 +93,15 @@ _demo-light: _pre-demo
 
     {{vhs-script}}
 
+# Generate demo GIFs in assets/
 demo: _demo-dark _demo-light
-    
+
+# Clean all cache directories
 clean:
     @rm -rvf dist
-    @find . -type d \(      \
-      -name "__pycache__"    \
+    @find . -type d \(     \
+      -name "dist"          \
+      -o -name "__pycache__" \
       -o -name ".ruff_cache"  \
       -o -name ".pytest_cache" \
       -o -name ".mypy_cache" \) \

@@ -3,15 +3,15 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
+    utils.url = "github:numtide/flake-utils";
   };
 
   outputs = inputs @ {
     nixpkgs,
-    flake-utils,
+    utils,
     ...
   }:
-    flake-utils.lib.eachDefaultSystem (system: let
+    utils.lib.eachDefaultSystem (system: let
       pkgs = nixpkgs.legacyPackages.${system};
       python = pkgs.python311;
       pyPkgs = python.pkgs;
@@ -81,16 +81,16 @@
       };
 
       apps = {
-        default = flake-utils.lib.mkApp {
+        default = utils.lib.mkApp {
           drv = kharkiv-metro-cli;
         };
-        metro = flake-utils.lib.mkApp {
+        metro = utils.lib.mkApp {
           drv = kharkiv-metro-cli;
         };
-        metro-bot = flake-utils.lib.mkApp {
+        metro-bot = utils.lib.mkApp {
           drv = kharkiv-metro-bot;
         };
-        metro-mcp = flake-utils.lib.mkApp {
+        metro-mcp = utils.lib.mkApp {
           drv = kharkiv-metro-mcp;
         };
       };

@@ -14,7 +14,6 @@ from kharkiv_metro_core import (
     MetroClosedError,
     get_line_display_name,
     get_text,
-    load_metro_data,
     parse_day_type_display,
     parse_line_display_name,
 )
@@ -39,61 +38,31 @@ from ..utils import (
     build_line_groups,
     format_route,
     generate_route_key,
+    get_back_texts,
+    get_cancel_texts,
     get_router,
     get_stations_by_line,
     get_stations_by_line_except,
+    get_valid_lines,
     now,
+    update_message,
 )
 
 # Store pending reminders and active routes
 pending_reminders: dict[int, dict] = {}
 _active_routes: dict[str, tuple] = {}
 
-# Create router for route handlers
+# Create routers for route handlers
+command_router = Router()
 router = Router()
+router.message.filter(~F.text.startswith("/"))
 
-BACK_TEXTS = (get_text("back", "ua"), get_text("back", "en"))
-CANCEL_TEXTS = (get_text("cancel", "ua"), get_text("cancel", "en"))
+BACK_TEXTS = get_back_texts()
+CANCEL_TEXTS = get_cancel_texts()
 BACK_OR_CANCEL_TEXTS = BACK_TEXTS + CANCEL_TEXTS
 
 
 # ===== Helper Functions =====
-
-
-async def update_message(
-    message: types.Message,
-    state: FSMContext,
-    text: str,
-    keyboard,
-) -> None:
-    """Update existing message or send new one."""
-    data = await state.get_data()
-    msg_id = data.get("active_message_id")
-
-    if isinstance(keyboard, types.ReplyKeyboardMarkup):
-        msg = await message.answer(text, reply_markup=keyboard)
-        await state.update_data(active_message_id=msg.message_id)
-        return
-
-    if msg_id:
-        try:
-            await message.bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=msg_id,
-                text=text,
-                reply_markup=keyboard,
-            )
-            return
-        except Exception:
-            pass
-
-    msg = await message.answer(text, reply_markup=keyboard)
-    await state.update_data(active_message_id=msg.message_id)
-
-
-def get_valid_lines(lang: Language) -> list[str]:
-    """Get list of valid line display names."""
-    return [get_line_display_name(line_key, lang) for line_key in load_metro_data().line_order]
 
 
 def parse_time(time_str: str) -> datetime | None:
@@ -146,7 +115,7 @@ async def restore_pending_reminders(bot) -> None:
 # ===== Main Entry Point =====
 
 
-@router.message(Command("route"), StateFilter("*"))
+@command_router.message(Command("route"), StateFilter("*"))
 async def cmd_route(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Start route conversation."""
     await state.clear()
@@ -252,7 +221,7 @@ async def handle_cancel(message: types.Message, state: FSMContext, lang: Languag
 
 @router.message(
     RouteStates.waiting_for_from_line,
-    ~F.text.in_(CANCEL_TEXTS),
+    ~F.text.in_(BACK_OR_CANCEL_TEXTS),
 )
 async def process_from_line(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Process line selection for 'from' station."""
@@ -764,4 +733,5 @@ async def cancel_reminder(callback: types.CallbackQuery, lang: Language = "ua"):
 
 def register_route_handlers(dp: Dispatcher) -> None:
     """Register route handlers."""
+    dp.include_router(command_router)
     dp.include_router(router)

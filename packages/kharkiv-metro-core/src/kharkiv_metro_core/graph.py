@@ -124,10 +124,6 @@ class MetroGraph:
 
         return path, distances[end_id]
 
-    def get_station(self, station_id: str) -> Station | None:
-        """Get station by ID."""
-        return self.stations.get(station_id)
-
     def find_station_by_name(self, name: str, lang: str = "ua") -> Station | None:
         """Find station by name (fuzzy matching with old name support)."""
         name_lower = name.lower().strip()
@@ -154,18 +150,6 @@ class MetroGraph:
                 return station
 
         return None
-
-    def get_neighbors(self, station_id: str) -> list[tuple[Station, float, bool]]:
-        """Get neighboring stations with weights."""
-        if station_id not in self.nodes:
-            return []
-
-        result = []
-        for edge in self.nodes[station_id].edges:
-            neighbor = self.stations.get(edge.to_station_id)
-            if neighbor:
-                result.append((neighbor, edge.weight, edge.is_transfer))
-        return result
 
 
 @lru_cache(maxsize=1)

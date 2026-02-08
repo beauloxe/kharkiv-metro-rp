@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import click
 from kharkiv_metro_core import Config
 
-from .config_cmd import config_cmd
 from .init_cmd import init
 from .route_cmd import route
 from .schedule_cmd import schedule
@@ -34,15 +31,7 @@ def cli(ctx: click.Context, config_path: str | None, db_path: str | None) -> Non
     """Kharkiv Metro Route Planner CLI."""
     ctx.ensure_object(dict)
 
-    # Initialize config
-    if config_path:
-        # Custom config path - create minimal config
-        config = Config()
-        config.config_file = Path(config_path)
-        config._load()
-    else:
-        config = Config()
-
+    config = Config(config_path)
     ctx.obj["config"] = config
     ctx.obj["db_path"] = db_path  # CLI override
 
@@ -53,7 +42,6 @@ cli.add_command(route)
 cli.add_command(schedule)
 cli.add_command(stations)
 cli.add_command(scrape)
-cli.add_command(config_cmd, name="config")
 
 
 if __name__ == "__main__":

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import math
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 import click
 from click.exceptions import Exit
@@ -37,12 +38,16 @@ def format_transfers(count: int, lang: str = "ua") -> str:
     return text.format(count=count)
 
 
+def get_config(ctx: click.Context) -> Config:
+    """Get Config instance from context."""
+    return ctx.obj["config"]
+
+
 def get_db_path(ctx: click.Context) -> str:
     """Get database path from context or config."""
     if ctx.obj.get("db_path"):
         return ctx.obj["db_path"]
-    config: Config = ctx.obj["config"]
-    return config.get_db_path()
+    return get_config(ctx).get_db_path()
 
 
 def ensure_db(db_path: str) -> MetroDatabase:
@@ -54,17 +59,56 @@ def ensure_db(db_path: str) -> MetroDatabase:
     return MetroDatabase(db_path)
 
 
-def init_db_if_needed(config: Config) -> MetroDatabase:
-    """Initialize database if it doesn't exist."""
-    db_path = config.get_db_path()
+def init_or_get_db(db_path: str) -> MetroDatabase:
+    """Initialize database if needed and return it."""
     if not os.path.exists(db_path):
-        console.print("[cyan]ℹ First run detected[/cyan]")
-        console.print(f"[dim]Database:[/dim] {db_path}\n")
-        db = init_database(db_path)
-        console.print(f"[green]✓[/green] Initialized {db_path}")
-        console.print("[yellow]ℹ[/yellow] Run 'metro scrape' to populate schedules\n")
-        return db
+        return init_database(db_path)
     return MetroDatabase(db_path)
+
+
+def get_db(ctx: click.Context) -> MetroDatabase:
+    """Get database instance or fail if missing."""
+    return ensure_db(get_db_path(ctx))
+
+
+def get_lang(ctx: click.Context, value: str | None) -> str:
+    """Get language from option or config."""
+    return value or get_config(ctx).get("preferences.language", "ua")
+
+
+def get_output_format(ctx: click.Context, value: str | None, key: str, default: str) -> str:
+    """Get output format from option or config key."""
+    return value or get_config(ctx).get(key, default)
+
+
+def parse_day_type(value: str | None):
+    """Parse day type option into enum."""
+    from kharkiv_metro_core import DayType
+
+    if not value:
+        return None
+    return DayType.WEEKDAY if value == "weekday" else DayType.WEEKEND
+
+
+def find_station_or_exit(router, name: str, lang: str):
+    """Find station or exit with error message."""
+    station = router.find_station_by_name(name, lang)
+    if not station:
+        click.echo(f"Station not found: {name}", err=True)
+        raise Exit(1)
+    return station
+
+
+def run_with_error_handling(func: Callable[[], None], output: str | None = None) -> None:
+    """Run command handler with consistent error handling."""
+    try:
+        func()
+    except Exception as e:
+        if output == "json":
+            click.echo(json.dumps({"status": "error", "message": str(e)}))
+        else:
+            console.print(f"[red]Error:[/red] {e}")
+        raise Exit(1)
 
 
 def _format_minutes(duration: int, lang: str, approximate: bool = False) -> str:
@@ -188,6 +232,41 @@ def display_route_simple(route: Route, lang: str, compact: bool = False) -> None
 
     console.print(f"[dim]{time_str}[/dim]")
     console.print(path_str)
+
+
+def format_station_rows(stations_data: list[dict], name_attr: str, lang: str) -> list[tuple[str, str]]:
+    """Prepare station rows with line names."""
+    from kharkiv_metro_core import Line
+
+    rows = []
+    for station in stations_data:
+        line_enum = Line(station["line"])
+        line_name = line_enum.display_name_ua if lang == "ua" else line_enum.display_name_en
+        rows.append((line_name, station[name_attr]))
+    return rows
+
+
+def output_stations_table(rows: list[tuple[str, str]], lang: str) -> None:
+    """Output stations in table format."""
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column(_("Line", lang))
+    table.add_column(_("Station", lang))
+    for line_name, station_name in rows:
+        table.add_row(line_name, station_name)
+    console.print(table)
+
+
+def output_stations_json(rows: list[tuple[str, str]], stations_data: list[dict], lang: str) -> None:
+    """Output stations in JSON format."""
+    result = [
+        {
+            "id": station["id"],
+            "name": station[f"name_{lang}"],
+            "line": line_name,
+        }
+        for station, (line_name, _station_name) in zip(stations_data, rows, strict=False)
+    ]
+    click.echo(json.dumps(result, indent=2, ensure_ascii=False))
 
 
 def _group_segments(route: Route, lang: str) -> list[dict]:

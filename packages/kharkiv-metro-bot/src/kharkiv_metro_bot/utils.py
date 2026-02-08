@@ -8,6 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from aiogram import types
+from aiogram.fsm.context import FSMContext
 from kharkiv_metro_core import (
     Config,
     DayType,
@@ -16,6 +18,7 @@ from kharkiv_metro_core import (
     MetroRouter,
     Route,
     get_line_display_name,
+    get_text,
     init_database,
     init_schedules,
     load_metro_data,
@@ -68,6 +71,52 @@ def _normalize_line_key(line_key: str | None) -> str | None:
         if meta.get("name_ua") == line_key:
             return key
     return None
+
+
+def get_valid_lines(lang: Language = "ua") -> list[str]:
+    """Get list of valid line display names."""
+    return [get_line_display_name(line_key, lang) for line_key in load_metro_data().line_order]
+
+
+async def update_message(
+    message: types.Message,
+    state: FSMContext,
+    text: str,
+    keyboard,
+) -> None:
+    """Update existing message or send new one."""
+    data = await state.get_data()
+    msg_id = data.get("active_message_id")
+
+    if isinstance(keyboard, types.ReplyKeyboardMarkup):
+        msg = await message.answer(text, reply_markup=keyboard)
+        await state.update_data(active_message_id=msg.message_id)
+        return
+
+    if msg_id:
+        try:
+            await message.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=msg_id,
+                text=text,
+                reply_markup=keyboard,
+            )
+            return
+        except Exception:
+            pass
+
+    msg = await message.answer(text, reply_markup=keyboard)
+    await state.update_data(active_message_id=msg.message_id)
+
+
+def get_back_texts() -> tuple[str, str]:
+    """Get back button texts for both languages."""
+    return (get_text("back", "ua"), get_text("back", "en"))
+
+
+def get_cancel_texts() -> tuple[str, str]:
+    """Get cancel button texts for both languages."""
+    return (get_text("cancel", "ua"), get_text("cancel", "en"))
 
 
 def get_stations_by_line(router: MetroRouter, line_key: str, lang: Language = "ua") -> list[str]:

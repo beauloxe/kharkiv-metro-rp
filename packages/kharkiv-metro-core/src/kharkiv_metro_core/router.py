@@ -69,43 +69,6 @@ class MetroRouter:
 
         return route
 
-    def find_multiple_routes(
-        self,
-        from_station_id: str,
-        to_station_id: str,
-        departure_time: dt.datetime,
-        num_options: int = 3,
-    ) -> list[Route]:
-        """Find multiple route options."""
-        day_type = self._get_day_type(departure_time)
-        routes = []
-
-        # Find primary route
-        try:
-            primary = self.find_route(from_station_id, to_station_id, departure_time, day_type)
-            if primary:
-                routes.append(primary)
-        except MetroClosedError:
-            pass  # Metro is closed at departure time, try alternatives
-
-        # Find alternative routes by trying different departure times
-        current_time = departure_time
-        for _i in range(1, num_options * 2):
-            if len(routes) >= num_options:
-                break
-
-            # Try 10 minutes later
-            current_time = current_time + dt.timedelta(minutes=10)
-            try:
-                alt_route = self.find_route(from_station_id, to_station_id, current_time, day_type)
-
-                if alt_route and not self._routes_similar(routes[-1], alt_route):
-                    routes.append(alt_route)
-            except MetroClosedError:
-                break  # Metro is closed, no point in trying later times
-
-        return routes[:num_options]
-
     def _build_route_with_schedule(
         self,
         path: list[str],
@@ -333,24 +296,6 @@ class MetroRouter:
         if current_dt.weekday() >= 5:
             return DayType.WEEKEND
         return DayType.WEEKDAY
-
-    def _routes_similar(self, route1: Route, route2: Route) -> bool:
-        """Check if two routes are similar."""
-        if len(route1.segments) != len(route2.segments):
-            return False
-
-        for s1, s2 in zip(route1.segments, route2.segments, strict=False):
-            if s1.from_station.id != s2.from_station.id:
-                return False
-            if s1.to_station.id != s2.to_station.id:
-                return False
-
-        if route1.departure_time and route2.departure_time:
-            diff = abs((route1.departure_time - route2.departure_time).total_seconds())
-            if diff < 300:
-                return True
-
-        return False
 
     def get_station_schedule(
         self,

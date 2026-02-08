@@ -4,18 +4,22 @@ from __future__ import annotations
 
 import json
 from datetime import time
-from typing import TYPE_CHECKING
 
 import click
 from click.exceptions import Exit
-from kharkiv_metro_core import Config, DayType, MetroDatabase, MetroRouter, now
+from kharkiv_metro_core import DayType, MetroRouter, now
 from kharkiv_metro_core import get_text as tr
 from rich.table import Table
 
-from .utils import console
-
-if TYPE_CHECKING:
-    from click.core import Context
+from .utils import (
+    console,
+    find_station_or_exit,
+    get_db,
+    get_lang,
+    get_output_format,
+    parse_day_type,
+    run_with_error_handling,
+)
 
 
 @click.command()
@@ -49,7 +53,7 @@ if TYPE_CHECKING:
 )
 @click.pass_context
 def schedule(
-    ctx: Context,
+    ctx: click.Context,
     station: str,
     direction: str | None,
     day_type: str | None,
@@ -57,31 +61,20 @@ def schedule(
     output: str | None,
 ) -> None:
     """Show schedule for a station."""
-    fmt = output or "table"
+    fmt = get_output_format(ctx, output, "preferences.output_format", "table")
+    lang = get_lang(ctx, lang)
 
-    try:
-        config: Config = ctx.obj["config"]
-        lang = lang or config.get("preferences.language", "ua")
-
-        # Get database and router
-        db_path = str(ctx.obj.get("db_path") or config.get_db_path())
-        db = MetroDatabase(db_path)
+    def _run() -> None:
+        db = get_db(ctx)
         router = MetroRouter(db=db)
 
         # Find station
-        st = router.find_station_by_name(station, lang)
-        if not st:
-            click.echo(f"Station not found: {station}", err=True)
-            raise Exit(1)
+        st = find_station_or_exit(router, station, lang)
 
         # Determine day type
-        day_type_enum = (
-            DayType.WEEKDAY
-            if day_type == "weekday"
-            else DayType.WEEKEND
-            if day_type
-            else (DayType.WEEKDAY if now().weekday() < 5 else DayType.WEEKEND)
-        )
+        day_type_enum = parse_day_type(day_type)
+        if day_type_enum is None:
+            day_type_enum = DayType.WEEKDAY if now().weekday() < 5 else DayType.WEEKEND
 
         # Find direction if specified
         direction_id = None
@@ -110,12 +103,7 @@ def schedule(
         else:
             _output_table(st, schedules, router, lang, first_departure, last_departure, is_open)
 
-    except Exception as e:
-        if fmt == "json":
-            click.echo(json.dumps({"status": "error", "message": str(e)}))
-        else:
-            console.print(f"[red]Error:[/red] {e}")
-        raise Exit(1)
+    run_with_error_handling(_run, fmt)
 
 
 def _output_json(st, schedules, router, lang: str) -> None:

@@ -1,14 +1,14 @@
 """Schedule handlers for the Telegram bot."""
 
-from aiogram import Dispatcher, F, types
+from aiogram import Dispatcher, F, Router, types
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
+
 from kharkiv_metro_core import (
     DayType,
     Language,
     get_line_display_name,
     get_text,
-    load_metro_data,
     parse_day_type_display,
     parse_line_display_name,
 )
@@ -22,12 +22,26 @@ from ..keyboards import (
 from ..states import ScheduleStates
 from ..utils import (
     format_schedule,
+    get_back_texts,
+    get_cancel_texts,
     get_current_day_type,
     get_router,
     get_stations_by_line,
+    get_valid_lines,
+    update_message,
 )
 
+# Create routers for schedule handlers
+command_router = Router()
+router = Router()
+router.message.filter(~F.text.startswith("/"))
 
+BACK_TEXTS = get_back_texts()
+CANCEL_TEXTS = get_cancel_texts()
+BACK_OR_CANCEL_TEXTS = BACK_TEXTS + CANCEL_TEXTS
+
+
+@command_router.message(Command("schedule"), StateFilter("*"))
 async def cmd_schedule(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Handle /schedule command."""
     await state.clear()
@@ -35,7 +49,7 @@ async def cmd_schedule(message: types.Message, state: FSMContext, lang: Language
     if len(args) < 2:
         await state.set_state(ScheduleStates.waiting_for_line)
 
-        valid_lines = [get_line_display_name(line_key, lang) for line_key in load_metro_data().line_order]
+        valid_lines = get_valid_lines(lang)
 
         msg = await message.answer(
             get_text("select_line", lang),
@@ -78,6 +92,7 @@ async def cmd_schedule(message: types.Message, state: FSMContext, lang: Language
     await state.clear()
 
 
+@router.message(ScheduleStates.waiting_for_line, ~F.text.in_(BACK_OR_CANCEL_TEXTS))
 async def process_schedule_line(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Process line selection for schedule."""
     selected_line = parse_line_display_name(message.text, lang)
@@ -98,38 +113,24 @@ async def process_schedule_line(message: types.Message, state: FSMContext, lang:
     # Store valid stations for validation
     await state.update_data(valid_stations=stations)
 
-    data = await state.get_data()
-    active_msg_id = data.get("active_message_id")
     line_display = get_line_display_name(selected_line, lang)
 
-    if active_msg_id:
-        try:
-            await message.bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=active_msg_id,
-                text=get_text("select_station_line", lang, line=line_display),
-                reply_markup=get_stations_keyboard(stations, lang),
-            )
-        except Exception:
-            msg = await message.answer(
-                get_text("select_station_line", lang, line=line_display),
-                reply_markup=get_stations_keyboard(stations, lang),
-            )
-            await state.update_data(active_message_id=msg.message_id)
-    else:
-        msg = await message.answer(
-            get_text("select_station_line", lang, line=line_display),
-            reply_markup=get_stations_keyboard(stations, lang),
-        )
-        await state.update_data(active_message_id=msg.message_id)
+    await update_message(
+        message,
+        state,
+        get_text("select_station_line", lang, line=line_display),
+        get_stations_keyboard(stations, lang),
+    )
 
 
+@router.message(ScheduleStates.waiting_for_line, F.text.in_(BACK_TEXTS))
 async def back_from_schedule_line(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Go back from schedule line - return to main menu."""
     await state.clear()
     await message.answer(get_text("main_menu", lang), reply_markup=get_main_keyboard(lang))
 
 
+@router.message(ScheduleStates.waiting_for_line, F.text.in_(CANCEL_TEXTS))
 async def cancel_from_schedule_line(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Cancel schedule lookup from line."""
     await state.clear()
@@ -139,6 +140,7 @@ async def cancel_from_schedule_line(message: types.Message, state: FSMContext, l
     )
 
 
+@router.message(ScheduleStates.waiting_for_station, ~F.text.in_(BACK_OR_CANCEL_TEXTS))
 async def process_schedule_station(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Process station selection for schedule."""
     # Validate station selection
@@ -160,61 +162,30 @@ async def process_schedule_station(message: types.Message, state: FSMContext, la
         get_text("weekends", lang),
     ]
 
-    data = await state.get_data()
-    active_msg_id = data.get("active_message_id")
+    await state.update_data(valid_day_types=valid_day_types)
 
-    if active_msg_id:
-        try:
-            await message.bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=active_msg_id,
-                text=get_text("day_type_prompt", lang),
-                reply_markup=get_day_type_keyboard(lang),
-            )
-            await state.update_data(valid_day_types=valid_day_types)
-        except Exception:
-            msg = await message.answer(
-                get_text("day_type_prompt", lang),
-                reply_markup=get_day_type_keyboard(lang),
-            )
-            await state.update_data(active_message_id=msg.message_id, valid_day_types=valid_day_types)
-    else:
-        msg = await message.answer(
-            get_text("day_type_prompt", lang),
-            reply_markup=get_day_type_keyboard(lang),
-        )
-        await state.update_data(active_message_id=msg.message_id, valid_day_types=valid_day_types)
+    await update_message(
+        message,
+        state,
+        get_text("day_type_prompt", lang),
+        get_day_type_keyboard(lang),
+    )
 
 
+@router.message(ScheduleStates.waiting_for_station, F.text.in_(BACK_TEXTS))
 async def back_from_schedule_station(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Go back from schedule station - return to line selection."""
     await state.set_state(ScheduleStates.waiting_for_line)
 
-    data = await state.get_data()
-    active_msg_id = data.get("active_message_id")
-
-    if active_msg_id:
-        try:
-            await message.bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=active_msg_id,
-                text=get_text("select_line", lang),
-                reply_markup=get_lines_keyboard(lang),
-            )
-        except Exception:
-            msg = await message.answer(
-                get_text("select_line", lang),
-                reply_markup=get_lines_keyboard(lang),
-            )
-            await state.update_data(active_message_id=msg.message_id)
-    else:
-        msg = await message.answer(
-            get_text("select_line", lang),
-            reply_markup=get_lines_keyboard(lang),
-        )
-        await state.update_data(active_message_id=msg.message_id)
+    await update_message(
+        message,
+        state,
+        get_text("select_line", lang),
+        get_lines_keyboard(lang),
+    )
 
 
+@router.message(ScheduleStates.waiting_for_station, F.text.in_(CANCEL_TEXTS))
 async def cancel_from_schedule_station(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Cancel schedule lookup from station."""
     await state.clear()
@@ -224,6 +195,7 @@ async def cancel_from_schedule_station(message: types.Message, state: FSMContext
     )
 
 
+@router.message(ScheduleStates.waiting_for_day_type, ~F.text.in_(BACK_OR_CANCEL_TEXTS))
 async def process_day_type(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Process day type selection and show schedule."""
     selected_day = parse_day_type_display(message.text, lang)
@@ -272,16 +244,19 @@ async def process_day_type(message: types.Message, state: FSMContext, lang: Lang
     await state.clear()
 
 
+@router.message(ScheduleStates.waiting_for_day_type, F.text.in_(BACK_TEXTS))
 async def back_from_day_type(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Go back from day type - return to station selection."""
     data = await state.get_data()
     schedule_line = data.get("schedule_line")
-    active_msg_id = data.get("active_message_id")
-
     if not schedule_line:
         await state.set_state(ScheduleStates.waiting_for_line)
-        msg = await message.answer(get_text("select_line", lang), reply_markup=get_lines_keyboard(lang))
-        await state.update_data(active_message_id=msg.message_id)
+        await update_message(
+            message,
+            state,
+            get_text("select_line", lang),
+            get_lines_keyboard(lang),
+        )
         return
 
     router = get_router()
@@ -290,28 +265,15 @@ async def back_from_day_type(message: types.Message, state: FSMContext, lang: La
 
     await state.set_state(ScheduleStates.waiting_for_station)
 
-    if active_msg_id:
-        try:
-            await message.bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=active_msg_id,
-                text=get_text("select_station_line", lang, line=line_display),
-                reply_markup=get_stations_keyboard(stations, lang),
-            )
-        except Exception:
-            msg = await message.answer(
-                get_text("select_station_line", lang, line=line_display),
-                reply_markup=get_stations_keyboard(stations, lang),
-            )
-            await state.update_data(active_message_id=msg.message_id)
-    else:
-        msg = await message.answer(
-            get_text("select_station_line", lang, line=line_display),
-            reply_markup=get_stations_keyboard(stations, lang),
-        )
-        await state.update_data(active_message_id=msg.message_id)
+    await update_message(
+        message,
+        state,
+        get_text("select_station_line", lang, line=line_display),
+        get_stations_keyboard(stations, lang),
+    )
 
 
+@router.message(ScheduleStates.waiting_for_day_type, F.text.in_(CANCEL_TEXTS))
 async def cancel_from_day_type(message: types.Message, state: FSMContext, lang: Language = "ua"):
     """Cancel schedule lookup from day_type."""
     await state.clear()
@@ -323,34 +285,5 @@ async def cancel_from_day_type(message: types.Message, state: FSMContext, lang: 
 
 def register_schedule_handlers(dp: Dispatcher):
     """Register schedule handlers."""
-    # Command handlers
-    dp.message.register(cmd_schedule, Command("schedule"), StateFilter("*"))
-
-    # Line selection state handlers
-    dp.message.register(back_from_schedule_line, ScheduleStates.waiting_for_line, F.text == get_text("back", "ua"))
-    dp.message.register(back_from_schedule_line, ScheduleStates.waiting_for_line, F.text == get_text("back", "en"))
-    dp.message.register(cancel_from_schedule_line, ScheduleStates.waiting_for_line, F.text == get_text("cancel", "ua"))
-    dp.message.register(cancel_from_schedule_line, ScheduleStates.waiting_for_line, F.text == get_text("cancel", "en"))
-    dp.message.register(process_schedule_line, ScheduleStates.waiting_for_line)
-
-    # Station selection state handlers
-    dp.message.register(
-        back_from_schedule_station, ScheduleStates.waiting_for_station, F.text == get_text("back", "ua")
-    )
-    dp.message.register(
-        back_from_schedule_station, ScheduleStates.waiting_for_station, F.text == get_text("back", "en")
-    )
-    dp.message.register(
-        cancel_from_schedule_station, ScheduleStates.waiting_for_station, F.text == get_text("cancel", "ua")
-    )
-    dp.message.register(
-        cancel_from_schedule_station, ScheduleStates.waiting_for_station, F.text == get_text("cancel", "en")
-    )
-    dp.message.register(process_schedule_station, ScheduleStates.waiting_for_station)
-
-    # Day type selection state handlers
-    dp.message.register(back_from_day_type, ScheduleStates.waiting_for_day_type, F.text == get_text("back", "ua"))
-    dp.message.register(back_from_day_type, ScheduleStates.waiting_for_day_type, F.text == get_text("back", "en"))
-    dp.message.register(cancel_from_day_type, ScheduleStates.waiting_for_day_type, F.text == get_text("cancel", "ua"))
-    dp.message.register(cancel_from_day_type, ScheduleStates.waiting_for_day_type, F.text == get_text("cancel", "en"))
-    dp.message.register(process_day_type, ScheduleStates.waiting_for_day_type)
+    dp.include_router(command_router)
+    dp.include_router(router)

@@ -5,18 +5,10 @@ from __future__ import annotations
 import json
 
 import click
-from click.exceptions import Exit
-from kharkiv_metro_core import Config, init_database
-
-from .utils import console, ensure_db
+from .utils import console, get_db_path, init_or_get_db, run_with_error_handling
 
 
 @click.command()
-@click.option(
-    "--init-db",
-    is_flag=True,
-    help="Initialize database with stations before scraping",
-)
 @click.option(
     "--output",
     "-o",
@@ -25,16 +17,13 @@ from .utils import console, ensure_db
     help="Output format",
 )
 @click.pass_context
-def scrape(ctx: click.Context, init_db: bool, output: str) -> None:
+def scrape(ctx: click.Context, output: str) -> None:
     """Scrape and update schedules from metro.kharkiv.ua."""
     from kharkiv_metro_core import MetroScraper
 
-    try:
-        config: Config = ctx.obj["config"]
-        db_path = config.get_db_path()
-
-        # Use config database path
-        db = init_database(db_path) if init_db else ensure_db(db_path)
+    def _run() -> None:
+        db_path = get_db_path(ctx)
+        db = init_or_get_db(db_path)
 
         if output == "table":
             console.print("[cyan]Scraping schedules from metro.kharkiv.ua...[/cyan]")
@@ -63,9 +52,4 @@ def scrape(ctx: click.Context, init_db: bool, output: str) -> None:
         else:
             console.print(f"[green]✓[/green] Saved [bold]{count}[/bold] schedules from {unique_stations} stations")
 
-    except Exception as e:
-        if output == "json":
-            click.echo(json.dumps({"status": "error", "message": str(e)}))
-        else:
-            console.print(f"[red]✗[/red] Error: {e}")
-        raise Exit(1)
+    run_with_error_handling(_run, output)

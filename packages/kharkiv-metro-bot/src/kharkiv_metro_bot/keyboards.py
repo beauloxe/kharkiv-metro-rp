@@ -8,6 +8,12 @@ from aiogram.types import (
 )
 from kharkiv_metro_core import Language, MetroRouter, get_line_display_name, get_text, load_metro_data
 
+
+def get_nav_buttons(lang: Language) -> list[KeyboardButton]:
+    """Build navigation buttons (back/cancel)."""
+    return [KeyboardButton(text=get_text("back", lang)), KeyboardButton(text=get_text("cancel", lang))]
+
+
 from .constants import LINE_ORDER
 
 # Navigation button texts
@@ -26,7 +32,7 @@ def get_main_keyboard(lang: Language = "ua") -> ReplyKeyboardMarkup:
 
 def _add_nav_buttons(keyboard: list, lang: Language) -> list:
     """Add back and cancel buttons to keyboard."""
-    keyboard.append([KeyboardButton(text=get_text("back", lang)), KeyboardButton(text=get_text("cancel", lang))])
+    keyboard.append(get_nav_buttons(lang))
     return keyboard
 
 
@@ -179,4 +185,4 @@ def get_language_keyboard() -> ReplyKeyboardMarkup:
         [KeyboardButton(text="🇺🇦 Українська")],
         [KeyboardButton(text="🇬🇧 English")],
     ]
-    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True, one_time_keyboard=True)
+    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)

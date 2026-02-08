@@ -11,19 +11,15 @@ from zoneinfo import ZoneInfo
 
 DEFAULT_CONFIG = """[database]
 auto = true
-# path = "~/.local/share/kharkiv-metro-rp/metro.db"  # used if auto = false
+# path = "~/.local/share/kharkiv-metro-rp/metro.db"
 
 [preferences]
 language = "ua"
 output_format = "table"
 
 [preferences.route]
-format = "full"  # "full" (table), "simple" (inline), or "json"
-compact = false  # true = show only key stations (start, transfers, end)
-
-[scraper]
-timeout = 30
-user_agent = "kharkiv-metro-rp/1.0"
+format = "full"
+compact = false
 
 [user_data]
 enabled = true
@@ -32,14 +28,14 @@ enabled = true
 
 
 class Config:
-    """Configuration manager using XDG directories."""
+    """Read-only configuration for CLI and services."""
 
     TIMEZONE: ZoneInfo = ZoneInfo(os.getenv("TZ", "Europe/Kyiv"))
 
-    def __init__(self) -> None:
+    def __init__(self, config_path: str | Path | None = None) -> None:
         self.config_dir = self._get_config_dir()
         self.data_dir = self._get_data_dir()
-        self.config_file = self.config_dir / "config.toml"
+        self.config_file = Path(config_path) if config_path else self.config_dir / "config.toml"
         self._config: dict[str, Any] = {}
         self._load()
 
@@ -73,22 +69,6 @@ class Config:
         else:
             self._config = tomllib.loads(DEFAULT_CONFIG)
 
-    def _parse_default(self) -> dict[str, Any]:
-        """Parse default configuration."""
-        return tomllib.loads(DEFAULT_CONFIG)
-
-    def ensure_dirs(self) -> None:
-        """Ensure configuration and data directories exist."""
-        self.config_dir.mkdir(parents=True, exist_ok=True)
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-
-    def create_default(self) -> None:
-        """Create default configuration file."""
-        self.ensure_dirs()
-        if not self.config_file.exists():
-            with open(self.config_file, "w", encoding="utf-8") as f:
-                f.write(DEFAULT_CONFIG)
-
     def get(self, key: str, default: Any = None) -> Any:
         """Get configuration value by key (e.g., 'database.auto')."""
         keys = key.split(".")
@@ -99,29 +79,6 @@ class Config:
             else:
                 return default
         return value
-
-    def set(self, key: str, value: Any) -> None:
-        """Set configuration value by key."""
-        keys = key.split(".")
-        config = self._config
-        for k in keys[:-1]:
-            if k not in config:
-                config[k] = {}
-            config = config[k]
-        config[keys[-1]] = value
-        self._save()
-
-    def _save(self) -> None:
-        """Save configuration to file."""
-        import toml
-
-        with open(self.config_file, "w", encoding="utf-8") as f:
-            toml.dump(self._config, f)
-
-    def reset(self) -> None:
-        """Reset configuration to defaults."""
-        self._config = self._parse_default()
-        self._save()
 
     def get_db_path(self, cli_override: str | None = None) -> str:
         """Get database path based on configuration."""
@@ -158,17 +115,3 @@ class Config:
     def is_user_data_enabled(self) -> bool:
         """Check if user data storage is enabled."""
         return self.get("user_data.enabled", True)
-
-    def to_dict(self) -> dict[str, Any]:
-        """Return configuration as dictionary."""
-        return self._config.copy()
-
-    @property
-    def config_path(self) -> str:
-        """Return path to configuration file."""
-        return str(self.config_file)
-
-    @property
-    def data_path(self) -> str:
-        """Return path to data directory."""
-        return str(self.data_dir)

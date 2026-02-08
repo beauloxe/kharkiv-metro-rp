@@ -7,9 +7,20 @@ from datetime import datetime
 
 import click
 from click.exceptions import Exit
-from kharkiv_metro_core import Config, DayType, MetroClosedError, MetroDatabase, MetroRouter, now
+from kharkiv_metro_core import Config, MetroClosedError, MetroRouter, now
 
-from .utils import console, display_route_simple, display_route_table
+from .utils import (
+    console,
+    display_route_simple,
+    display_route_table,
+    find_station_or_exit,
+    get_config,
+    get_db,
+    get_lang,
+    get_output_format,
+    parse_day_type,
+    run_with_error_handling,
+)
 
 
 @click.command()
@@ -34,30 +45,21 @@ def route(
     compact: bool,
 ) -> None:
     """Find route between two stations."""
-    config: Config = ctx.obj["config"]
-    lang = lang or config.get("preferences.language", "ua")
-    fmt = format or config.get("preferences.route.format", "full")
+    config = get_config(ctx)
+    lang = get_lang(ctx, lang)
+    fmt = get_output_format(ctx, format, "preferences.route.format", "full")
 
     # Handle compact flag logic
     config_compact = config.get("preferences.route.compact", False)
     show_compact = (not config_compact) if compact else config_compact
 
-    try:
-        # Get database
-        db_path = str(ctx.obj.get("db_path") or config.get_db_path())
-        db = MetroDatabase(db_path)
+    def _run() -> None:
+        db = get_db(ctx)
         router = MetroRouter(db=db)
 
         # Find stations
-        from_st = router.find_station_by_name(from_station, lang)
-        to_st = router.find_station_by_name(to_station, lang)
-
-        if not from_st:
-            click.echo(f"Station not found: {from_station}", err=True)
-            raise Exit(1)
-        if not to_st:
-            click.echo(f"Station not found: {to_station}", err=True)
-            raise Exit(1)
+        from_st = find_station_or_exit(router, from_station, lang)
+        to_st = find_station_or_exit(router, to_station, lang)
 
         # Parse departure time
         if time:
@@ -73,9 +75,7 @@ def route(
             departure_time = now().replace(hour=hour, minute=minute, second=0, microsecond=0)
 
         # Determine day type
-        day_type_enum = None
-        if day_type:
-            day_type_enum = DayType.WEEKDAY if day_type == "weekday" else DayType.WEEKEND
+        day_type_enum = parse_day_type(day_type)
 
         # Find route
         try:
@@ -92,15 +92,9 @@ def route(
             click.echo("No route found", err=True)
             raise Exit(1)
 
-        # Output result
         _output_route(route_result, from_st, to_st, lang, fmt, show_compact)
 
-    except Exception as e:
-        if fmt == "json":
-            click.echo(json.dumps({"status": "error", "message": str(e)}))
-        else:
-            console.print(f"[red]Error:[/red] {e}")
-        raise Exit(1)
+    run_with_error_handling(_run, fmt)
 
 
 def _output_route(route, from_st, to_st, lang: str, fmt: str, compact: bool) -> None:

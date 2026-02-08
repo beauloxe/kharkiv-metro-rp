@@ -70,20 +70,6 @@ class ScheduleEntry:
     def time(self) -> dt.time:
         return dt.datetime.strptime(f"{self.hour:02d}:{self.minutes:02d}", "%H:%M").time()
 
-    def to_datetime(self, base_date: dt.datetime) -> dt.datetime:
-        # Preserve timezone from base_date
-        return base_date.replace(hour=self.hour, minute=self.minutes, second=0, microsecond=0)
-
-    def __lt__(self, other: ScheduleEntry) -> bool:
-        if self.hour != other.hour:
-            return self.hour < other.hour
-        return self.minutes < other.minutes
-
-    def __le__(self, other: ScheduleEntry) -> bool:
-        if self.hour != other.hour:
-            return self.hour < other.hour
-        return self.minutes <= other.minutes
-
 
 @dataclass(slots=True)
 class StationSchedule:
@@ -97,11 +83,7 @@ class StationSchedule:
     def get_next_departures(self, after_time: dt.time, limit: int = 3) -> list[ScheduleEntry]:
         """Get next departures at or after given time."""
         future = [e for e in self.entries if e.time >= after_time]
-        return sorted(future)[:limit]
-
-    def get_departures_between(self, start_time: dt.time, end_time: dt.time) -> list[ScheduleEntry]:
-        """Get departures between two times."""
-        return [e for e in self.entries if start_time <= e.time <= end_time]
+        return list(sorted(future, key=lambda entry: (entry.hour, entry.minutes)))[:limit]
 
 
 @dataclass(slots=True)

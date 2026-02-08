@@ -25,6 +25,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/kharkiv_metro_core"]
+include = ["src/kharkiv_metro_core/translations/*.toml"]
 
 [tool.ruff]
 line-length = 120

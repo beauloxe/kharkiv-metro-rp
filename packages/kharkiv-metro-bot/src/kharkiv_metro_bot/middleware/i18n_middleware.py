@@ -15,14 +15,11 @@ class I18nMiddleware(BaseMiddleware):
         """Add language and get_text function to handler data."""
         # Get user_id from event
         user_id = None
-        if isinstance(event, Message) or isinstance(event, CallbackQuery):
+        if isinstance(event, (Message, CallbackQuery)):
             user_id = event.from_user.id if event.from_user else None
 
         # Get user language
-        if user_id:
-            lang = get_user_language(user_id)
-        else:
-            lang = DEFAULT_LANGUAGE
+        lang = get_user_language(user_id) if user_id else DEFAULT_LANGUAGE
 
         # Add to data
         data["lang"] = lang

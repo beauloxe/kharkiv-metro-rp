@@ -1,7 +1,6 @@
 """Telegram Bot for Kharkiv Metro Route Planner."""
 
 from .constants import (
-    DAY_TYPE_DISPLAY_TO_INTERNAL,
     DAY_TYPE_INTERNAL_TO_DISPLAY,
     LINE_COLOR_EMOJI,
     LINE_INTERNAL_TO_DISPLAY,
@@ -50,7 +49,6 @@ __all__ = [
     "LINE_ORDER",
     "LINE_COLOR_EMOJI",
     "LINE_NAME_EMOJI",
-    "DAY_TYPE_DISPLAY_TO_INTERNAL",
     "DAY_TYPE_INTERNAL_TO_DISPLAY",
     "ButtonText",
     "CommandText",

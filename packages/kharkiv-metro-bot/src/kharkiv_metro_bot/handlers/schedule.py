@@ -191,37 +191,26 @@ async def back_from_schedule_station(message: types.Message, state: FSMContext, 
     await state.set_state(ScheduleStates.waiting_for_line)
 
     data = await state.get_data()
-    schedule_line = data.get("schedule_line")
     active_msg_id = data.get("active_message_id")
-
-    if not schedule_line:
-        await state.set_state(ScheduleStates.waiting_for_line)
-        msg = await message.answer(get_text("select_line", lang), reply_markup=get_lines_keyboard(lang))
-        await state.update_data(active_message_id=msg.message_id)
-        return
-
-    router = get_router()
-    stations = get_stations_by_line(router, schedule_line, lang)
-    line_display = get_line_display_name(schedule_line, lang)
 
     if active_msg_id:
         try:
             await message.bot.edit_message_text(
                 chat_id=message.chat.id,
                 message_id=active_msg_id,
-                text=get_text("select_station_line", lang, line=line_display),
-                reply_markup=get_stations_keyboard(stations, lang),
+                text=get_text("select_line", lang),
+                reply_markup=get_lines_keyboard(lang),
             )
         except Exception:
             msg = await message.answer(
-                get_text("select_station_line", lang, line=line_display),
-                reply_markup=get_stations_keyboard(stations, lang),
+                get_text("select_line", lang),
+                reply_markup=get_lines_keyboard(lang),
             )
             await state.update_data(active_message_id=msg.message_id)
     else:
         msg = await message.answer(
-            get_text("select_station_line", lang, line=line_display),
-            reply_markup=get_stations_keyboard(stations, lang),
+            get_text("select_line", lang),
+            reply_markup=get_lines_keyboard(lang),
         )
         await state.update_data(active_message_id=msg.message_id)
 

@@ -36,7 +36,7 @@ def get_lines_keyboard(lang: Language = "ua") -> ReplyKeyboardMarkup:
         [KeyboardButton(text=get_line_display_name(line_key, lang))] for line_key in load_metro_data().line_order
     ]
     keyboard = _add_nav_buttons(keyboard, lang)
-    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True, one_time_keyboard=True)
+    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
 
 def get_day_type_keyboard(lang: Language = "ua") -> ReplyKeyboardMarkup:
@@ -46,7 +46,7 @@ def get_day_type_keyboard(lang: Language = "ua") -> ReplyKeyboardMarkup:
         [KeyboardButton(text=get_text("weekends", lang))],
     ]
     keyboard = _add_nav_buttons(keyboard, lang)
-    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True, one_time_keyboard=True)
+    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
 
 def get_time_choice_keyboard(lang: Language = "ua") -> ReplyKeyboardMarkup:
@@ -58,7 +58,7 @@ def get_time_choice_keyboard(lang: Language = "ua") -> ReplyKeyboardMarkup:
         [KeyboardButton(text=get_text("custom_time", lang))],
     ]
     keyboard = _add_nav_buttons(keyboard, lang)
-    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True, one_time_keyboard=True)
+    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
 
 def get_stations_keyboard(
@@ -72,7 +72,7 @@ def get_stations_keyboard(
         keyboard.append(row)
 
     keyboard = _add_nav_buttons(keyboard, lang)
-    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True, one_time_keyboard=True)
+    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
 
 def _get_station_internal_name(router: MetroRouter, display_name: str) -> str | None:
@@ -122,7 +122,7 @@ def get_stations_keyboard_by_line(
             keyboard.append(row)
 
     keyboard = _add_nav_buttons(keyboard, lang)
-    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True, one_time_keyboard=True)
+    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
 
 def build_reminder_keyboard(

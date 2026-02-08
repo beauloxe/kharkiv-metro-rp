@@ -1,251 +1,65 @@
 """Internationalization module for Kharkiv Metro."""
 
-from typing import Literal
+from collections.abc import Callable
+from functools import lru_cache
+from importlib import resources
+
+import toml
 
 from .data_loader import load_metro_data
 
-Language = Literal["ua", "en"]
+Language = str
 
 DEFAULT_LANGUAGE: Language = "ua"
 
-# Translation dictionary
-TRANSLATIONS: dict[Language, dict[str, str]] = {
-    "ua": {
-        # CLI specific
-        "From": "Звідки",
-        "To": "Куди",
-        "Line": "Лінія",
-        "Time": "Час",
-        "Transfer": "Пересадка",
-        "min": "хв",
-        "Hour": "Година",
-        "Operating hours": "Години роботи",
-        "CLOSED": "ЗАКРИТО",
-        "Station": "Станція",
-        "no_transfers": "без пересадок",
-        "transfers_one": "{count} пересадка",
-        "transfers_many": "{count} пересадки",
-        # Main menu
-        "main_menu": "🏠 Головне меню",
-        "route": "📍 Маршрут",
-        "schedule": "📅 Розклад",
-        "stations": "📋 Станції",
-        "language": "🌐 Мова",
-        "about": "ℹ️ Про бота",
-        # Navigation
-        "back": "🔙 Назад",
-        "cancel": "❌ Скасувати",
-        "next": "Далі ▶️",
-        # Route building
-        "from_station_prompt": "📍 Звідки їдемо? Спочатку оберіть лінію:",
-        "to_station_prompt": "📍 Куди їдемо? Спочатку оберіть лінію:",
-        "select_station_line": "📍 Оберіть станцію на лінії {line}:",
-        "time_prompt": "⏰ Який час?",
-        "day_type_prompt": "📅 Оберіть тип дня:",
-        "custom_time_prompt": "⌚ Введіть час у форматі ГГ:ХХ (наприклад: 14:30)",
-        # Time options
-        "current_time": "🕐 Поточний час",
-        "custom_time": "⌚ Свій час",
-        "time_minus_20": "⏪ -20 хв",
-        "time_minus_10": "◀ -10 хв",
-        "time_plus_10": "▶ +10 хв",
-        "time_plus_20": "⏩ +20 хв",
-        # Day types
-        "weekdays": "📅 Будні",
-        "weekends": "🎉 Вихідні",
-        "weekday": "Будній",
-        "weekend": "Вихідний",
-        # Errors
-        "error_unknown_line": "❌ Невідома лінія. Оберіть з клавіатури.",
-        "error_unknown_choice": "❌ Невідомий вибір. Оберіть з клавіатури.",
-        "error_invalid_time_format": "❌ Неправильний формат часу. Введіть у форматі ГГ:ХХ (наприклад: 14:30)",
-        "error_invalid_time": "❌ Неправильний час. Введіть годину (0-23) та хвилини (0-59).\nНаприклад: 14:30",
-        "error_station_not_found": "❌ Станцію не знайдено: {station}\nСпробуйте ще раз через /route",
-        "error_route_not_found": "❌ Маршрут не знайдено\nСпробуйте інші станції.",
-        "error_metro_closed": "❌ Метро закрите та/або на останній потяг неможливо встигнути\nСпробуйте інший час або день.",
-        "error_reminder_time_passed": "❌ Час вже пройшов, нагадування неможливо встановити",
-        # Admin
-        "user_data_disabled": "📊 Збір даних користувачів вимкнено.",
-        "stats_title": "📊 <b>Статистика бота</b>",
-        "stats_users": "Користувачі:",
-        "stats_users_total": "  • Всього унікальних: {count}",
-        "stats_users_active_today": "  • Активних сьогодні: {count}",
-        "stats_users_active_week": "  • Активних цього тижня: {count}",
-        "stats_features": "Використання функцій:",
-        "stats_no_data": "  • Даних ще немає",
-        "error_generic": "❌ Помилка: {error}\nСпробуйте ще раз через /route",
-        "error_cancelled": "❌ Побудову маршруту скасовано",
-        # Reminders
-        "reminder_set": "✅ Нагадування встановлено!",
-        "reminder_cancelled": "❌ Нагадування скасовано!",
-        "reminder_exit_prepare": "⏰ Готуйтесь виходити на наступній станції: {station}",
-        "reminder_button": "⏰ Вихід на {station}",
-        "reminder_button_default": "⏰ Вихід",
-        "reminder_cancel_button": "❌ Скасувати нагадування на {time}",
-        "reminder_set_short": "✅",
-        # Outdated
-        "outdated_button": "❌ Ця кнопка застаріла. Будь ласка, побудуйте маршрут знову.",
-        "error_invalid_data": "❌ Помилка: неправильний формат даних",
-        "error_route_expired": "❌ Помилка: маршрут не знайдено або застарів",
-        "error_invalid_line": "❌ Помилка: неправильний індекс лінії",
-        # Commands
-        "cmd_start": "Запустити бота",
-        "cmd_route": "Побудувати маршрут",
-        "cmd_schedule": "Розклад станції",
-        "cmd_stations": "Список станцій",
-        "cmd_about": "Про бота",
-        "cmd_language": "Змінити мову",
-        # Lines (for display)
-        # Language selection
-        "select_language": "🌐 Оберіть мову / Select language:",
-        "language_set": "✅ Мову змінено на Українську",
-        # Common / Menu
-        "start_message": "🚇 Бот для планування маршрутів Харківського метро\n\nОберіть дію:",
-        "about_message": (
-            "🚇 Цей бот допомагає знаходити оптимальні маршрути та переглядати розклад Харківського метрополітену.\n\n"
-            "Основні функції:\n"
-            "• Гнучка побудова маршруту з пересадками та часом на поїздку\n"
-            "• Нагадування перед виходом за одну станцію\n"
-            "• Розклад станцій по буднях та вихідних\n"
-            "Джерело даних: https://www.metro.kharkiv.ua/hkrafiky-krukhu-poizdiv/\n\n"
-            "⚠️ Цей проєкт не пов'язаний з КП «Харківський метрополітен» і не надає жодних гарантій. "
-            "Користуючись цим проєктом, Ви несете відповідальність за планування маршруту."
-            '\n\nБільше інформації та код проєкту <a href="https://github.com/beauloxe/kharkiv-metro-rp">за посиланням</a>.'
-        ),
-        "select_line": "📅 Оберіть лінію метро:",
-        "session_restored": "🤖 Сеанс відновлено\n\nСхоже, сесія закінчилась.\nПовертаємось до головного меню:",
-        # Schedule
-        "schedule_not_found": "❌ Розклад не знайдено",
-        "schedule_cancelled": "❌ Перегляд розкладу скасовано",
-        "direction": "Напрямок",
-        # Stations
-        "stations_cancelled": "❌ Перегляд станцій скасовано",
-        # Navigation hint
-        "navigation_hint": "👇 Оберіть варіант нижче або натисніть кнопку:",
-    },
-    "en": {
-        # CLI specific
-        "From": "From",
-        "To": "To",
-        "Line": "Line",
-        "Time": "Time",
-        "Transfer": "Transfer",
-        "min": "min",
-        "Hour": "Hour",
-        "Operating hours": "Operating hours",
-        "CLOSED": "CLOSED",
-        "Station": "Station",
-        "no_transfers": "no transfers",
-        "transfers_one": "{count} transfer",
-        "transfers_many": "{count} transfers",
-        # Main menu
-        "main_menu": "🏠 Main menu",
-        "route": "🚇 Route",
-        "schedule": "📅 Schedule",
-        "stations": "📋 Stations",
-        "language": "🌐 Language",
-        "about": "ℹ️ About",
-        # Navigation
-        "back": "🔙 Back",
-        "cancel": "❌ Cancel",
-        "next": "Next ▶️",
-        # Route building
-        "from_station_prompt": "📍 Where are you traveling from? First, select a line:",
-        "to_station_prompt": "📍 Where are you going to? First, select a line:",
-        "select_station_line": "📍 Select a station on the {line} line:",
-        "time_prompt": "⏰ What time?",
-        "day_type_prompt": "📅 Select day type:",
-        "custom_time_prompt": "⌚ Enter time in HH:MM format (e.g., 14:30)",
-        # Time options
-        "current_time": "🕐 Current time",
-        "custom_time": "⌚ Custom time",
-        "time_minus_20": "⏪ -20 min",
-        "time_minus_10": "◀ -10 min",
-        "time_plus_10": "▶ +10 min",
-        "time_plus_20": "⏩ +20 min",
-        # Day types
-        "weekdays": "📅 Weekdays",
-        "weekends": "🎉 Weekends",
-        "weekday": "Weekday",
-        "weekend": "Weekend",
-        # Errors
-        "error_unknown_line": "❌ Unknown line. Please select from the keyboard.",
-        "error_unknown_choice": "❌ Unknown choice. Please select from the keyboard.",
-        "error_invalid_time_format": "❌ Invalid time format. Enter in HH:MM format (e.g., 14:30)",
-        "error_invalid_time": "❌ Invalid time. Enter hour (0-23) and minutes (0-59).\nExample: 14:30",
-        "error_station_not_found": "❌ Station not found: {station}\nPlease try again via /route",
-        "error_route_not_found": "❌ Route not found\nPlease try other stations.",
-        "error_metro_closed": "❌ Metro is closed and/or you cannot catch the last train\nPlease try another time or day.",
-        "error_reminder_time_passed": "❌ Time has already passed, reminder cannot be set",
-        # Admin
-        "user_data_disabled": "📊 User data collection is disabled.",
-        "stats_title": "📊 <b>Bot Statistics</b>",
-        "stats_users": "Users:",
-        "stats_users_total": "  • Total unique: {count}",
-        "stats_users_active_today": "  • Active today: {count}",
-        "stats_users_active_week": "  • Active this week: {count}",
-        "stats_features": "Feature Usage:",
-        "stats_no_data": "  • No data yet",
-        "error_generic": "❌ Error: {error}\nPlease try again via /route",
-        "error_cancelled": "❌ Route planning cancelled",
-        # Reminders
-        "reminder_set": "✅ Reminder set!",
-        "reminder_cancelled": "❌ Reminder cancelled!",
-        "reminder_exit_prepare": "⏰ Get ready to exit at the next station: {station}",
-        "reminder_button": "⏰ Exit at {station}",
-        "reminder_button_default": "⏰ Exit",
-        "reminder_cancel_button": "❌ Cancel reminder at {time}",
-        "reminder_set_short": "✅",
-        # Outdated
-        "outdated_button": "❌ This button is outdated. Please rebuild your route.",
-        "error_invalid_data": "❌ Error: invalid data format",
-        "error_route_expired": "❌ Error: route not found or expired",
-        "error_invalid_line": "❌ Error: invalid line index",
-        # Commands
-        "cmd_start": "Start the bot",
-        "cmd_route": "Build a route",
-        "cmd_schedule": "Station schedule",
-        "cmd_stations": "List of stations",
-        "cmd_about": "About the bot",
-        "cmd_language": "Change language",
-        # Lines (for display)
-        # Language selection
-        "select_language": "🌐 Select language / Оберіть мову:",
-        "language_set": "✅ Language changed to English",
-        # Common / Menu
-        "start_message": "🚇 Kharkiv Metro Route Planner Bot\n\nChoose an action:",
-        "about_message": (
-            "🚇 This bot helps find optimal routes and view schedules for Kharkiv Metro.\n\n"
-            "Main features:\n"
-            "• Flexible route building with transfers and travel time\n"
-            "• Reminders one station before exit\n"
-            "• Station schedules for weekdays and weekends\n"
-            "Data source: https://www.metro.kharkiv.ua/hkrafiky-krukhu-poizdiv/\n\n"
-            "⚠️ This project is not affiliated with KP «Kharkiv Metro» and provides no guarantees. "
-            "By using this project, you are responsible for route planning.\n\n"
-            'More information and project code <a href="https://github.com/beauloxe/kharkiv-metro-rp">at this link</a>.'
-        ),
-        "select_line": "📅 Select a metro line:",
-        "session_restored": "🤖 Session restored\n\nLooks like the session has expired.\nReturning to main menu:",
-        # Schedule
-        "schedule_not_found": "❌ Schedule not found",
-        "schedule_cancelled": "❌ Schedule lookup cancelled",
-        "direction": "Direction",
-        # Stations
-        "stations_cancelled": "❌ Stations lookup cancelled",
-        # Navigation hint
-        "navigation_hint": "👇 Select an option below or press a button:",
-    },
-}
+_TRANSLATIONS_CACHE: dict[Language, dict[str, str]] = {}
 
 
-def _build_line_internal_names() -> dict[str, str]:
-    metro_data = load_metro_data()
-    return {key: meta["name_ua"] for key, meta in metro_data.line_meta.items()}
+@lru_cache(maxsize=1)
+def get_available_languages() -> list[Language]:
+    languages: set[Language] = set()
+    try:
+        package = resources.files("kharkiv_metro_core.translations")
+    except (ModuleNotFoundError, FileNotFoundError):
+        package = None
+
+    if package is not None:
+        for entry in package.iterdir():
+            name = entry.name
+            if name.endswith(".toml"):
+                languages.add(name.removesuffix(".toml"))
+
+    languages.add(DEFAULT_LANGUAGE)
+    return sorted(languages)
+
+
+def _load_translations(lang: Language) -> dict[str, str]:
+    if lang in _TRANSLATIONS_CACHE:
+        return _TRANSLATIONS_CACHE[lang]
+
+    try:
+        path = resources.files("kharkiv_metro_core.translations").joinpath(f"{lang}.toml")
+        data = path.read_text(encoding="utf-8")
+    except (ModuleNotFoundError, FileNotFoundError):
+        _TRANSLATIONS_CACHE[lang] = {}
+        return _TRANSLATIONS_CACHE[lang]
+
+    translations = toml.loads(data)
+    _TRANSLATIONS_CACHE[lang] = translations
+    return translations
+
+
+def _get_line_meta_value(line_meta: dict[str, str], lang: Language, field: str) -> str:
+    value = line_meta.get(f"{field}_{lang}")
+    if value:
+        return value
+    fallback = line_meta.get(f"{field}_{DEFAULT_LANGUAGE}")
+    if fallback:
+        return fallback
+    return line_meta.get(field, "")
 
 
 LINE_META: dict[str, dict[str, str]] = load_metro_data().line_meta
-LINE_INTERNAL_NAMES: dict[str, str] = _build_line_internal_names()
 INTERNAL_LINE_NAME_TO_KEY: dict[str, str] = {meta["name_ua"]: key for key, meta in LINE_META.items()}
 
 
@@ -254,13 +68,17 @@ def get_text(key: str, lang: Language = DEFAULT_LANGUAGE, **kwargs) -> str:
 
     Args:
         key: Translation key
-        lang: Language code ('ua' or 'en')
+        lang: Language code
         **kwargs: Format string arguments
 
     Returns:
         Translated text
     """
-    text = TRANSLATIONS.get(lang, TRANSLATIONS[DEFAULT_LANGUAGE]).get(key, key)
+    text = _load_translations(lang).get(key)
+    if text is None and lang != DEFAULT_LANGUAGE:
+        text = _load_translations(DEFAULT_LANGUAGE).get(key)
+    if text is None:
+        text = key
     if kwargs:
         try:
             text = text.format(**kwargs)
@@ -282,8 +100,8 @@ def get_line_display_name(line_key: str, lang: Language = DEFAULT_LANGUAGE) -> s
     line_meta = LINE_META.get(line_key)
     if not line_meta:
         return line_key
-    display_key = "display_ua" if lang == "ua" else "display_en"
-    return line_meta.get(display_key, line_key)
+    display_name = _get_line_meta_value(line_meta, lang, "display")
+    return display_name or line_key
 
 
 def get_line_short_name(line_key: str, lang: Language = DEFAULT_LANGUAGE) -> str:
@@ -299,7 +117,7 @@ def get_line_short_name(line_key: str, lang: Language = DEFAULT_LANGUAGE) -> str
     line_meta = LINE_META.get(line_key)
     if not line_meta:
         return line_key
-    name = line_meta.get("name_ua") if lang == "ua" else line_meta.get("name_en")
+    name = _get_line_meta_value(line_meta, lang, "name")
     return name or line_key
 
 
@@ -320,20 +138,23 @@ def get_line_display_by_internal(internal_name: str, lang: Language = DEFAULT_LA
 
 
 def _build_line_display_to_internal(lang: Language) -> dict[str, str]:
-    return {get_line_display_name(line_key, lang): LINE_INTERNAL_NAMES[line_key] for line_key in LINE_META}
+    return {get_line_display_name(line_key, lang): line_key for line_key in LINE_META}
 
 
-# Reverse mapping: display name -> internal line name
-LINE_DISPLAY_TO_INTERNAL_I18N: dict[Language, dict[str, str]] = {
-    "ua": _build_line_display_to_internal("ua"),
-    "en": _build_line_display_to_internal("en"),
-}
+from collections.abc import Callable
 
-# Combined mapping for all languages (for state-based validation)
-LINE_DISPLAY_TO_INTERNAL: dict[str, str] = {
-    **LINE_DISPLAY_TO_INTERNAL_I18N["ua"],
-    **LINE_DISPLAY_TO_INTERNAL_I18N["en"],
-}
+
+def _build_display_maps(
+    build_for_lang: Callable[[Language], dict[str, str]],
+) -> tuple[dict[Language, dict[str, str]], dict[str, str]]:
+    i18n_maps = {lang: build_for_lang(lang) for lang in get_available_languages()}
+    combined = {display: internal for mapping in i18n_maps.values() for display, internal in mapping.items()}
+    return i18n_maps, combined
+
+
+@lru_cache(maxsize=1)
+def _get_line_display_maps() -> tuple[dict[Language, dict[str, str]], dict[str, str]]:
+    return _build_display_maps(_build_line_display_to_internal)
 
 
 def parse_line_display_name(display_name: str, lang: Language = DEFAULT_LANGUAGE) -> str | None:
@@ -346,30 +167,35 @@ def parse_line_display_name(display_name: str, lang: Language = DEFAULT_LANGUAGE
     Returns:
         Internal line name or line key, or None if not found
     """
-    internal_name = LINE_DISPLAY_TO_INTERNAL_I18N.get(lang, {}).get(display_name)
+    i18n_maps, combined = _get_line_display_maps()
+    internal_name = i18n_maps.get(lang, {}).get(display_name)
     if internal_name:
         return internal_name
-    fallback_lang = "en" if lang == "ua" else "ua"
-    internal_name = LINE_DISPLAY_TO_INTERNAL_I18N.get(fallback_lang, {}).get(display_name)
+    if lang != DEFAULT_LANGUAGE:
+        internal_name = i18n_maps.get(DEFAULT_LANGUAGE, {}).get(display_name)
     if internal_name:
         return internal_name
     line_key = INTERNAL_LINE_NAME_TO_KEY.get(display_name)
-    return line_key or LINE_DISPLAY_TO_INTERNAL.get(display_name)
+    return line_key or combined.get(display_name)
 
 
 # Day type reverse mapping
 DAY_TYPE_META: dict[str, dict[str, str]] = load_metro_data().day_types
 
-DAY_TYPE_DISPLAY_TO_INTERNAL_I18N: dict[Language, dict[str, str]] = {
-    "ua": {f"{meta['emoji']} {meta['name_ua']}": key for key, meta in DAY_TYPE_META.items()},
-    "en": {f"{meta['emoji']} {meta['name_en']}": key for key, meta in DAY_TYPE_META.items()},
-}
 
-# Combined mapping for all languages
-DAY_TYPE_DISPLAY_TO_INTERNAL: dict[str, str] = {
-    **DAY_TYPE_DISPLAY_TO_INTERNAL_I18N["ua"],
-    **DAY_TYPE_DISPLAY_TO_INTERNAL_I18N["en"],
-}
+def _build_day_type_display_to_internal(lang: Language) -> dict[str, str]:
+    lang_map: dict[str, str] = {}
+    for key, meta in DAY_TYPE_META.items():
+        name = meta.get(f"name_{lang}") or meta.get(f"name_{DEFAULT_LANGUAGE}") or meta.get("name")
+        if not name:
+            continue
+        lang_map[f"{meta['emoji']} {name}"] = key
+    return lang_map
+
+
+@lru_cache(maxsize=1)
+def _get_day_type_display_maps() -> tuple[dict[Language, dict[str, str]], dict[str, str]]:
+    return _build_display_maps(_build_day_type_display_to_internal)
 
 
 def parse_day_type_display(display_name: str, lang: Language = DEFAULT_LANGUAGE) -> str | None:
@@ -382,4 +208,32 @@ def parse_day_type_display(display_name: str, lang: Language = DEFAULT_LANGUAGE)
     Returns:
         Internal day type ("weekday" or "weekend") or None
     """
-    return DAY_TYPE_DISPLAY_TO_INTERNAL_I18N.get(lang, {}).get(display_name)
+    i18n_maps, combined = _get_day_type_display_maps()
+    value = i18n_maps.get(lang, {}).get(display_name)
+    if value:
+        return value
+    if lang != DEFAULT_LANGUAGE:
+        value = i18n_maps.get(DEFAULT_LANGUAGE, {}).get(display_name)
+        if value:
+            return value
+    return combined.get(display_name)
+
+
+def get_line_display_to_internal(lang: Language | None = None) -> dict[str, str]:
+    i18n_maps, combined = _get_line_display_maps()
+    if lang is None:
+        return combined
+    return dict(i18n_maps.get(lang, {}))
+
+
+def get_day_type_display_to_internal(lang: Language | None = None) -> dict[str, str]:
+    i18n_maps, combined = _get_day_type_display_maps()
+    if lang is None:
+        return combined
+    return dict(i18n_maps.get(lang, {}))
+
+
+def get_translations(lang: Language | None = None) -> dict[Language, dict[str, str]] | dict[str, str]:
+    if lang is None:
+        return {language: _load_translations(language) for language in get_available_languages()}
+    return dict(_load_translations(lang))

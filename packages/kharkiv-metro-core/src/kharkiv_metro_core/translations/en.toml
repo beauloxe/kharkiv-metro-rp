@@ -1,0 +1,115 @@
+# CLI
+"From" = "From"
+"To" = "To"
+"Line" = "Line"
+"Time" = "Time"
+"Transfer" = "Transfer"
+"min" = "min"
+"Hour" = "Hour"
+"Operating hours" = "Operating hours"
+"CLOSED" = "CLOSED"
+"Station" = "Station"
+no_transfers = "no transfers"
+transfers_one = "{count} transfer"
+transfers_many = "{count} transfers"
+
+# Main menu
+main_menu = "🏠 Main menu"
+route = "🚇 Route"
+schedule = "📅 Schedule"
+stations = "📋 Stations"
+language = "🌐 Language"
+about = "ℹ️ About"
+
+# Navigation
+back = "🔙 Back"
+cancel = "❌ Cancel"
+next = "Next ▶️"
+
+# Route building
+from_station_prompt = "📍 Where are you traveling from? First, select a line:"
+to_station_prompt = "📍 Where are you going to? First, select a line:"
+select_station_line = "📍 Select a station on the {line} line:"
+time_prompt = "⏰ What time?"
+day_type_prompt = "📅 Select day type:"
+custom_time_prompt = "⌚ Enter time in HH:MM format (e.g., 14:30)"
+
+# Time options
+current_time = "🕐 Current time"
+custom_time = "⌚ Custom time"
+time_minus_20 = "⏪ -20 min"
+time_minus_10 = "◀ -10 min"
+time_plus_10 = "▶ +10 min"
+time_plus_20 = "⏩ +20 min"
+
+# Day types
+weekdays = "📅 Weekdays"
+weekends = "🎉 Weekends"
+weekday = "Weekday"
+weekend = "Weekend"
+
+# Errors
+error_unknown_line = "❌ Unknown line. Please select from the keyboard."
+error_unknown_choice = "❌ Unknown choice. Please select from the keyboard."
+error_invalid_time_format = "❌ Invalid time format. Enter in HH:MM format (e.g., 14:30)"
+error_invalid_time = "❌ Invalid time. Enter hour (0-23) and minutes (0-59).\nExample: 14:30"
+error_station_not_found = "❌ Station not found: {station}\nPlease try again via /route"
+error_route_not_found = "❌ Route not found\nPlease try other stations."
+error_metro_closed = "❌ Metro is closed and/or you cannot catch the last train\nPlease try another time or day."
+error_reminder_time_passed = "❌ Time has already passed, reminder cannot be set"
+error_generic = "❌ Error: {error}\nPlease try again via /route"
+error_cancelled = "❌ Route planning cancelled"
+error_invalid_data = "❌ Error: invalid data format"
+error_route_expired = "❌ Error: route not found or expired"
+error_invalid_line = "❌ Error: invalid line index"
+
+# Admin
+user_data_disabled = "📊 User data collection is disabled."
+stats_title = "📊 <b>Bot Statistics</b>"
+stats_users = "Users:"
+stats_users_total = "  • Total unique: {count}"
+stats_users_active_today = "  • Active today: {count}"
+stats_users_active_week = "  • Active this week: {count}"
+stats_features = "Feature Usage:"
+stats_no_data = "  • No data yet"
+
+# Reminders
+reminder_set = "✅ Reminder set!"
+reminder_cancelled = "❌ Reminder cancelled!"
+reminder_exit_prepare = "⏰ Get ready to exit at the next station: {station}"
+reminder_button = "⏰ Exit at {station}"
+reminder_button_default = "⏰ Exit"
+reminder_cancel_button = "❌ Cancel reminder at {time}"
+reminder_set_short = "✅"
+
+# Outdated
+outdated_button = "❌ This button is outdated. Please rebuild your route."
+
+# Commands
+cmd_start = "Start the bot"
+cmd_route = "Build a route"
+cmd_schedule = "Station schedule"
+cmd_stations = "List of stations"
+cmd_about = "About the bot"
+cmd_language = "Change language"
+
+# Language selection
+select_language = "🌐 Select language / Оберіть мову:"
+language_set = "✅ Language changed to English"
+
+# Common / Menu
+start_message = "🚇 Kharkiv Metro Route Planner Bot\n\nChoose an action:"
+about_message = "🚇 This bot helps find optimal routes and view schedules for Kharkiv Metro.\n\nMain features:\n• Flexible route building with transfers and travel time\n• Reminders one station before exit\n• Station schedules for weekdays and weekends\nData source: https://www.metro.kharkiv.ua/hkrafiky-krukhu-poizdiv/\n\n⚠️ This project is not affiliated with KP «Kharkiv Metro» and provides no guarantees. By using this project, you are responsible for route planning.\n\nMore information and project code <a href=\"https://github.com/beauloxe/kharkiv-metro-rp\">at this link</a>."
+select_line = "📅 Select a metro line:"
+session_restored = "🤖 Session restored\n\nLooks like the session has expired.\nReturning to main menu:"
+
+# Schedule
+schedule_not_found = "❌ Schedule not found"
+schedule_cancelled = "❌ Schedule lookup cancelled"
+direction = "Direction"
+
+# Stations
+stations_cancelled = "❌ Stations lookup cancelled"
+
+# Navigation hint
+navigation_hint = "👇 Select an option below or press a button:"

@@ -70,6 +70,11 @@ async def update_message(
     data = await state.get_data()
     msg_id = data.get("active_message_id")
 
+    if isinstance(keyboard, types.ReplyKeyboardMarkup):
+        msg = await message.answer(text, reply_markup=keyboard)
+        await state.update_data(active_message_id=msg.message_id)
+        return
+
     if msg_id:
         try:
             await message.bot.edit_message_text(

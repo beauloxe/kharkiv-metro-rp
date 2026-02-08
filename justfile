@@ -34,18 +34,21 @@ format:
     uv run ruff format .
 
 vhs-script := '
-    Set FontFamily "IosevkaTerm Nerd Font Mono"
+    Set FontFamily "Maple Mono"
     Set TypingSpeed 0.02
 
     Set Padding 16
     Set BorderRadius 12
-    Set Margin 8
+    Set Margin 2
     Set WindowBar RingsRight
 
-    Set LetterSpacing 2
+    # Set LetterSpacing 2
     Set FontSize 18
-    Set Width 1100
-    Set Height 600
+    Set Width 1200
+    Set Height 800
+
+    Type "# 1. Побудова маршруту (route)"
+    Enter
 
     Type "metro route салтівська турбоатом -t 07:25 -s weekday -f full"
     Sleep 0.5s
@@ -59,38 +62,95 @@ vhs-script := '
 
     Sleep 4s
 
+    Hide
+    Type "clear"
+    Enter
+    Show
+
+    Type "# 1.1. Компактний режим (-c/--compact)"
+    Enter
+
     Type "metro route салтівська турбоатом -t 07:25 -s weekday -f full --compact"
     Sleep 0.5s
     Enter
 
-    Sleep 2s
+    Sleep 1s
 
     Type "metro route салтівська турбоатом -t 07:25 -s weekday -f simple --compact"
     Sleep 0.5s
     Enter
 
-    Sleep 10s
+    Sleep 2s
+
+    Hide
+    Type "clear"
+    Enter
+    Show
+
+    Type "# 2. Розклад станції (schedule)"
+    Enter
+
+    Type "metro schedule київська -s weekday"
+    Sleep 0.5s
+    Enter
+
+    Sleep 2s
+
+    Type "metro schedule київська -s weekend"
+    Sleep 0.5s
+    Enter
+
+    Sleep 4s
+    
+    Hide
+    Type "clear"
+    Enter
+    Show
+
+    Type "# 3. Список станцій (stations)"
+    Enter
+
+    Type "metro stations"
+    Sleep 0.5s
+    Enter
+
+    Sleep 1s
+
+    # Hide
+    # Type "clear"
+    # Enter
+    # Show
+
+    Type "# 3.1. Список станцій на лінії (-l/--line)"
+    Enter
+
+    Type "metro stations -l s"
+    Sleep 0.5s
+    Enter
+
+    Sleep 2s
+
+    Type "metro stations -l k"
+    Sleep 0.5s
+    Enter
+
+    Sleep 8s
 '
 
-_pre-demo:
-    just metro config set preferences.route.compact false
-
 [working-directory: 'assets']
-_demo-dark: _pre-demo
+_demo-dark:
     #!/usr/bin/env vhs
     Output route_demo.gif
     Set Theme "GruvboxDarkHard"
     Set MarginFill "#0D1117"
-
     {{vhs-script}}
 
 [working-directory: 'assets']
-_demo-light: _pre-demo
+_demo-light:
     #!/usr/bin/env vhs
     Output route_demo_light.gif
     Set Theme "Gruvbox Light"
     Set MarginFill "#FFFFFF"
-
     {{vhs-script}}
 
 # Generate demo GIFs in assets/

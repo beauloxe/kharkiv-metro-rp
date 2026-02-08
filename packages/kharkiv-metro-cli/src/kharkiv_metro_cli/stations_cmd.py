@@ -48,3 +48,5 @@ def stations(ctx: click.Context, line: str | None, lang: str | None, output: str
             output_stations_json(rows, stations_data, lang)
         else:
             output_stations_table(rows, lang)
+
+    run_with_error_handling(_run)

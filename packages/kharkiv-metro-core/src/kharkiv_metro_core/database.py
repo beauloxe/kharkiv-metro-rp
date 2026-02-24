@@ -36,7 +36,7 @@ class MetroDatabase:
             yield self._connection
             return
 
-        conn = sqlite3.connect(str(self.db_path))
+        conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
         conn.row_factory = sqlite3.Row
         try:
             yield conn
@@ -59,7 +59,7 @@ class MetroDatabase:
             db_path = Config().get_db_path()
         resolved = str(Path(db_path))
         if resolved not in _CONNECTIONS:
-            conn = sqlite3.connect(resolved)
+            conn = sqlite3.connect(resolved, check_same_thread=False)
             conn.row_factory = sqlite3.Row
             _CONNECTIONS[resolved] = conn
         return cls(db_path=resolved, connection=_CONNECTIONS[resolved])
@@ -256,6 +256,40 @@ class MetroDatabase:
                     after_time.hour,
                     after_time.hour,
                     after_time.minute,
+                    limit,
+                ),
+            )
+
+            rows = cursor.fetchall()
+            return self._rows_to_entries(rows)
+
+    def get_previous_departures(
+        self,
+        station_id: str,
+        direction_station_id: str,
+        day_type: DayType,
+        before_time: dt.time,
+        limit: int = 3,
+    ) -> list[ScheduleEntry]:
+        """Get previous departures at or before given time."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                SELECT hour, minutes FROM schedules
+                WHERE station_id = ? AND direction_station_id = ? AND day_type = ?
+                AND (hour < ? OR (hour = ? AND minutes <= ?))
+                ORDER BY hour DESC, minutes DESC
+                LIMIT ?
+            """,
+                (
+                    station_id,
+                    direction_station_id,
+                    day_type.value,
+                    before_time.hour,
+                    before_time.hour,
+                    before_time.minute,
                     limit,
                 ),
             )

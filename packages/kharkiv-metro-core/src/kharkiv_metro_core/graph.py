@@ -36,7 +36,9 @@ class MetroGraph:
     def __init__(self, stations: dict[str, Station] | None = None) -> None:
         self.stations = stations or create_stations()
         self.nodes: dict[str, GraphNode] = {}
+        self._name_index: dict[str, dict[str, Station]] = {}
         self._build_graph()
+        self._build_name_index()
 
     def _build_graph(self) -> None:
         """Build graph from stations."""
@@ -74,6 +76,27 @@ class MetroGraph:
         """Add edge to graph."""
         if from_id in self.nodes:
             self.nodes[from_id].edges.append(Edge(to_station_id=to_id, weight=weight, is_transfer=is_transfer))
+
+    def _build_name_index(self) -> None:
+        """Build station name index for fast lookup."""
+        metro_data = load_metro_data()
+        for lang in ("ua", "en"):
+            name_attr = f"name_{lang}"
+            index: dict[str, Station] = {}
+            for station in self.stations.values():
+                name_value = getattr(station, name_attr).lower()
+                index[name_value] = station
+                normalized = name_value.replace("'", "").replace("«", "").replace("»", "").strip()
+                if normalized and normalized != name_value:
+                    index[normalized] = station
+            self._name_index[lang] = index
+
+        for alias, resolved in metro_data.aliases.items():
+            alias_lower = alias.lower().strip()
+            resolved_lower = resolved.lower().strip()
+            station = self._name_index.get("ua", {}).get(resolved_lower)
+            if station:
+                self._name_index.setdefault("ua", {})[alias_lower] = station
 
     def find_shortest_path(self, start_id: str, end_id: str) -> tuple[list[str], float] | None:
         """Find shortest path using Dijkstra's algorithm."""
@@ -129,22 +152,12 @@ class MetroGraph:
         name_lower = name.lower().strip()
         name_attr = f"name_{lang}"
 
-        metro_data = load_metro_data()
-
-        # Resolve alias to actual name
-        if name_lower in metro_data.aliases:
-            resolved_name = metro_data.aliases[name_lower]
-            name_lower = resolved_name.lower()
-
-        stations = list(self.stations.values())
-
-        # Exact match
-        for station in stations:
-            if getattr(station, name_attr).lower() == name_lower:
-                return station
+        station = self._name_index.get(lang, {}).get(name_lower)
+        if station:
+            return station
 
         # Partial match
-        for station in stations:
+        for station in self.stations.values():
             station_name = getattr(station, name_attr).lower()
             if name_lower in station_name or station_name in name_lower:
                 return station

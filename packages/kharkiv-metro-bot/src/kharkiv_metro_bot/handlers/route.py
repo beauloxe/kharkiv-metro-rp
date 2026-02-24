@@ -51,6 +51,7 @@ from ..utils import (
 # Store pending reminders and active routes
 pending_reminders: dict[int, dict] = {}
 _active_routes: dict[str, tuple] = {}
+_ACTIVE_ROUTE_TTL = timedelta(hours=2)
 
 # Create routers for route handlers
 command_router = Router()
@@ -63,6 +64,18 @@ BACK_OR_CANCEL_TEXTS = BACK_TEXTS + CANCEL_TEXTS
 
 
 # ===== Helper Functions =====
+
+
+def _purge_expired_routes() -> None:
+    """Remove expired cached routes for reminders."""
+    cutoff = now() - _ACTIVE_ROUTE_TTL
+    expired_keys = []
+    for key, (_route, _line_groups, created_at) in _active_routes.items():
+        if created_at < cutoff:
+            expired_keys.append(key)
+
+    for key in expired_keys:
+        _active_routes.pop(key, None)
 
 
 def parse_time(time_str: str) -> datetime | None:
@@ -330,9 +343,12 @@ async def process_time_choice(message: types.Message, state: FSMContext, lang: L
         get_text("time_plus_20", lang),
     ):
         await process_offset_time(message, state, lang)
-    elif text == get_text("custom_time", lang):
+    elif text in (get_text("custom_time", lang), get_text("arrival_by", lang)):
         await state.set_state(RouteStates.waiting_for_day_type)
-        await state.update_data(valid_day_types=[get_text("weekdays", lang), get_text("weekends", lang)])
+        await state.update_data(
+            valid_day_types=[get_text("weekdays", lang), get_text("weekends", lang)],
+            time_mode="arrival" if text == get_text("arrival_by", lang) else "departure",
+        )
 
         await update_message(
             message,
@@ -365,10 +381,13 @@ async def process_day_type_route(message: types.Message, state: FSMContext, lang
     await state.update_data(day_type=selected)
     await state.set_state(RouteStates.waiting_for_custom_time)
 
+    time_mode = data.get("time_mode", "departure")
+    prompt_key = "arrival_time_prompt" if time_mode == "arrival" else "custom_time_prompt"
+
     await update_message(
         message,
         state,
-        get_text("custom_time_prompt", lang),
+        get_text(prompt_key, lang),
         None,  # No keyboard for text input
     )
 
@@ -382,6 +401,13 @@ async def process_custom_time(message: types.Message, state: FSMContext, lang: L
     parsed = parse_time(message.text)
     if not parsed:
         await message.answer(get_text("error_invalid_time_format", lang))
+        return
+
+    data = await state.get_data()
+    time_mode = data.get("time_mode", "departure")
+
+    if time_mode == "arrival":
+        await _build_and_send_route(message, state, lang, parsed, arrival_by=parsed)
         return
 
     await _build_and_send_route(message, state, lang, parsed)
@@ -564,6 +590,7 @@ async def _build_and_send_route(
     state: FSMContext,
     lang: Language,
     departure_time: datetime,
+    arrival_by: datetime | None = None,
 ) -> None:
     """Build route and send result."""
     data = await state.get_data()
@@ -585,7 +612,16 @@ async def _build_and_send_route(
         return
 
     try:
-        route = metro_router.find_route(from_st.id, to_st.id, departure_time, day_type)
+        if arrival_by:
+            route = metro_router.find_route(
+                from_st.id,
+                to_st.id,
+                departure_time,
+                day_type,
+                arrival_by=arrival_by,
+            )
+        else:
+            route = metro_router.find_route(from_st.id, to_st.id, departure_time, day_type)
     except MetroClosedError:
         await message.answer(get_text("error_metro_closed", lang), reply_markup=get_main_keyboard(lang))
         await state.clear()
@@ -606,7 +642,8 @@ async def _build_and_send_route(
 
     # Store route for reminder callbacks
     route_key = generate_route_key(route)
-    _active_routes[route_key] = (route, line_groups)
+    _purge_expired_routes()
+    _active_routes[route_key] = (route, line_groups, now())
 
     keyboard = build_reminder_keyboard(route_key, line_groups, lang) if len(route.segments) > 1 else None
 
@@ -632,12 +669,13 @@ async def process_reminder(callback: types.CallbackQuery, lang: Language = "ua")
         await callback.answer(get_text("error_invalid_data", lang))
         return
 
+    _purge_expired_routes()
     route_data = _active_routes.get(route_key)
     if not route_data:
         await callback.answer(get_text("error_route_expired", lang))
         return
 
-    route, line_groups = route_data
+    route, line_groups, _created_at = route_data
     segments = list(line_groups.values())[group_idx] if group_idx < len(line_groups) else None
 
     if not segments:
@@ -717,9 +755,10 @@ async def cancel_reminder(callback: types.CallbackQuery, lang: Language = "ua"):
     # Reset keyboard
     try:
         _, route_key, group_idx = callback.data.split("|")
+        _purge_expired_routes()
         route_data = _active_routes.get(route_key)
         if route_data:
-            _, line_groups = route_data
+            _, line_groups, _created_at = route_data
             keyboard = build_reminder_keyboard(route_key, line_groups, lang)
             await callback.message.edit_reply_markup(reply_markup=keyboard)
     except ValueError:

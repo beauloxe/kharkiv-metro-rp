@@ -28,6 +28,7 @@ from .models import (
     Station,
     StationSchedule,
     create_stations,
+    format_transfers,
 )
 from .router import MetroRouter
 from .time_utils import now
@@ -63,6 +64,7 @@ __all__ = [
     "MetroClosedError",
     "load_metro_data",
     "create_stations",
+    "format_transfers",
     # Graph
     "MetroGraph",
     "get_metro_graph",

@@ -54,7 +54,7 @@ def init_database(db_path: str | None = None) -> MetroDatabase:
         from .config import Config
 
         db_path = Config().get_db_path()
-    db = MetroDatabase(db_path)
+    db = MetroDatabase.shared(db_path)
     init_stations(db)
     init_schedules(db)
     return db

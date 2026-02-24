@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import math
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -173,6 +172,9 @@ def format_route(route: Route, lang: Language = "ua") -> str:
 
     from .constants import LINE_COLOR_EMOJI
 
+    if not route.segments:
+        return ""
+
     name_attr = f"name_{lang}"
     min_text = get_text("min", lang)
 
@@ -189,58 +191,34 @@ def format_route(route: Route, lang: Language = "ua") -> str:
         f"{get_text('route', lang)}:",
     ]
 
-    i = 0
-    while i < len(route.segments):
-        seg = route.segments[i]
-
-        if seg.is_transfer:
+    for group in route.to_line_groups():
+        if group["is_transfer"]:
             lines.append("")
-            transfer_minutes = seg.duration_minutes
-            computed_delta = False
-            prev_seg = route.segments[i - 1] if i > 0 else None
-            arrival_time = prev_seg.arrival_time if prev_seg and prev_seg.arrival_time else seg.arrival_time
-            next_seg = route.segments[i + 1] if i + 1 < len(route.segments) else None
-            if arrival_time and next_seg and next_seg.departure_time:
-                delta_seconds = (next_seg.departure_time - arrival_time).total_seconds()
-                if delta_seconds >= 0:
-                    transfer_minutes = max(transfer_minutes, math.ceil(delta_seconds / 60))
-                    computed_delta = True
             lines.append(
-                f"🔄 {getattr(seg.from_station, name_attr)} → {getattr(seg.to_station, name_attr)} (<{_format_minutes(transfer_minutes, min_text, approximate=not computed_delta)})"
+                f"🔄 {getattr(group['from'], name_attr)} → {getattr(group['to'], name_attr)} "
+                f"(<{_format_minutes(group['duration_minutes'], min_text, approximate=not group['computed_delta'])})"
             )
             lines.append("")
-            i += 1
-        else:
-            # Group consecutive segments on same line
-            start_station = seg.from_station
-            start_time = seg.departure_time
-            end_station = seg.to_station
-            end_time = seg.arrival_time
-            total_duration = seg.duration_minutes
-            line = seg.from_station.line
+            continue
 
-            i += 1
-            while i < len(route.segments) and not route.segments[i].is_transfer:
-                end_station = route.segments[i].to_station
-                end_time = route.segments[i].arrival_time
-                total_duration += route.segments[i].duration_minutes
-                i += 1
+        line = group["line"]
+        color_emoji = LINE_COLOR_EMOJI.get(line.color, "⚪")
+        start_time = group.get("departure_time")
+        end_time = group.get("arrival_time")
+        has_times = start_time and end_time
+        time_str = (
+            f"{start_time.strftime('%H:%M')} → {end_time.strftime('%H:%M')}"
+            if has_times
+            else _format_minutes(group["duration_minutes"], min_text, approximate=True)
+        )
+        duration_str = (
+            f"{group['duration_minutes']} {min_text}"
+            if has_times
+            else _format_minutes(group["duration_minutes"], min_text, approximate=True)
+        )
 
-            color_emoji = LINE_COLOR_EMOJI.get(line.color, "⚪")
-            has_times = start_time and end_time
-            time_str = (
-                f"{start_time.strftime('%H:%M')} → {end_time.strftime('%H:%M')}"
-                if has_times
-                else _format_minutes(total_duration, min_text, approximate=True)
-            )
-            duration_str = (
-                f"{total_duration} {min_text}"
-                if has_times
-                else _format_minutes(total_duration, min_text, approximate=True)
-            )
-
-            lines.append(f"{color_emoji} {getattr(start_station, name_attr)} → {getattr(end_station, name_attr)}")
-            lines.append(f"• {time_str} ({duration_str})")
+        lines.append(f"{color_emoji} {getattr(group['from'], name_attr)} → {getattr(group['to'], name_attr)}")
+        lines.append(f"• {time_str} ({duration_str})")
 
     return "\n".join(lines)
 
